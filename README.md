@@ -5,7 +5,7 @@
 - **公開URL**: https://susax12.github.io/sakura-map/
 - デザイン: claude.ai/design リデザイン（雅/rose）を移植。明朝見出し・和紙トーン・ブルームクラスタ・サムネピン・舞う花びら
 - データソース: YouTube [@drone-entertainment](https://www.youtube.com/@drone-entertainment) 全公開動画から抽出（地図掲載 **125スポット / 134動画**）
-- 地域フィルタ＋桜の種類フィルタ＋検索、詳細パネル、撮影地一覧ドロワー
+- 地域フィルタ＋検索、詳細パネル、撮影地一覧ドロワー
 - 同一スポットの複数動画はピンに集約（パネルで動画切替）
 - ブランド（配色・フォント・ロゴ）は [drone-entertainment.co.jp](https://drone-entertainment.co.jp/) に準拠
 
@@ -20,7 +20,7 @@
 
 ## データ更新
 
-`index.html` 内の `const SPOTS = [...]` に1行追加。形状は `{id,name,pref,city,region,type,lat,lng,videos:[{ytId,label,title}]}`。同一スポットへの動画集約は `MERGE` で定義。桜の種類(`type`)は動画タイトルから自動推定（要会社確認）。
+`index.html` 内の `const SPOTS = [...]` に1行追加。形状は `{id,name,pref,city,region,lat,lng,videos:[{ytId,label,title}]}`（`type` は残るが未使用）。同一スポットへの動画集約は `MERGE` で定義。
 
 ## ステータス
 

@@ -254,10 +254,6 @@ html,body{margin:0;height:100%;font-family:var(--font-ui);color:var(--ink);backg
     <div class="filter-spacer"></div>
     <div class="tools">
       <button class="clear-filters" id="clearBtn" hidden></button>
-      <div class="type-select" id="typeSelect">
-        <button class="type-btn" id="typeBtn"><span id="typeLabel">桜の種類</span><svg class="caret" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <div class="type-menu" id="typeMenu" hidden></div>
-      </div>
       <label class="search">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <input id="search" placeholder="名所・地名で検索">
@@ -314,8 +310,8 @@ const SPOTS = [
   {"id": "re3ArOkFFMo", "name": "高松公園, 福泉寺の桜", "pref": "岩手県", "city": "", "region": "tohoku", "type": "someiyoshino", "lat": 39.57138, "lng": 141.42536, "videos": [{"ytId": "re3ArOkFFMo", "label": "本編", "title": "[桜ドローン撮影4K]岩手県高松公園, 福泉寺の桜 Takamatsu Park & Fukusenji｜桜ドローンプロジェクト"}]},
   {"id": "8P8pfy3lxt0", "name": "慈徳寺の種まき桜", "pref": "福島県", "city": "福島市", "region": "tohoku", "type": "someiyoshino", "lat": 37.76078, "lng": 140.47458, "videos": [{"ytId": "8P8pfy3lxt0", "label": "本編", "title": "[SAKURA DRONE 4K] 慈徳寺の種まき桜（Jitoku-ji Templeno Tanemakizakura）福島県福島市｜桜ドローンプロジェクト2026"}]},
   {"id": "zOeC4tGXeNE", "name": "秋山の駒ザクラ", "pref": "福島県", "city": "川俣町", "region": "tohoku", "type": "someiyoshino", "lat": 37.66497, "lng": 140.59861, "videos": [{"ytId": "zOeC4tGXeNE", "label": "本編", "title": "[SAKURA DRONE 4K] 秋山の駒ザクラ（Akiyamano Komazakura）福島県川俣町｜桜ドローンプロジェクト2026"}]},
-  {"id": "R2kWYqR_-MI", "name": "中島の地蔵桜", "pref": "福島県", "city": "二本松市2", "region": "tohoku", "type": "someiyoshino", "lat": 37.58504, "lng": 140.43139, "videos": [{"ytId": "R2kWYqR_-MI", "label": "本編", "title": "[SAKURA DRONE 4K] 中島の地蔵桜（Nakajimano Jizo-zakura）福島県二本松市2｜桜ドローンプロジェクト2026"}]},
-  {"id": "JgKYW1_ZGRs", "name": "祭田のサクラ", "pref": "福島県", "city": "二本松市2", "region": "tohoku", "type": "someiyoshino", "lat": 37.57767, "lng": 140.43814, "videos": [{"ytId": "JgKYW1_ZGRs", "label": "本編", "title": "[SAKURA DRONE 4K] 祭田のサクラ（Matsuridano Sakura）福島県二本松市2｜桜ドローンプロジェクト2026"}]},
+  {"id": "R2kWYqR_-MI", "name": "中島の地蔵桜", "pref": "福島県", "city": "二本松市", "region": "tohoku", "type": "someiyoshino", "lat": 37.58504, "lng": 140.43139, "videos": [{"ytId": "R2kWYqR_-MI", "label": "本編", "title": "[SAKURA DRONE 4K] 中島の地蔵桜（Nakajimano Jizo-zakura）福島県二本松市2｜桜ドローンプロジェクト2026"}]},
+  {"id": "JgKYW1_ZGRs", "name": "祭田のサクラ", "pref": "福島県", "city": "二本松市", "region": "tohoku", "type": "someiyoshino", "lat": 37.57767, "lng": 140.43814, "videos": [{"ytId": "JgKYW1_ZGRs", "label": "本編", "title": "[SAKURA DRONE 4K] 祭田のサクラ（Matsuridano Sakura）福島県二本松市2｜桜ドローンプロジェクト2026"}]},
   {"id": "3xrt6306SkI", "name": "日向の人待地蔵桜", "pref": "福島県", "city": "二本松市", "region": "tohoku", "type": "someiyoshino", "lat": 37.58626, "lng": 140.41744, "videos": [{"ytId": "3xrt6306SkI", "label": "本編", "title": "[SAKURA DRONE 4K] 日向の人待地蔵桜（Hinatano Hitomachi Jizo Sakura）福島県二本松市｜桜ドローンプロジェクト2026"}]},
   {"id": "6QaOvCrPltc", "name": "弥明の桜", "pref": "福島県", "city": "郡山市", "region": "tohoku", "type": "someiyoshino", "lat": 37.40494, "lng": 140.33338, "videos": [{"ytId": "6QaOvCrPltc", "label": "本編", "title": "[SAKURA DRONE 4K] 弥明の桜（Mimyo No Sakura）福島県郡山市｜桜ドローンプロジェクト2026"}]},
   {"id": "hHCo9UGxHS0", "name": "石部桜", "pref": "福島県", "city": "会津若松市", "region": "tohoku", "type": "someiyoshino", "lat": 37.51018, "lng": 139.95423, "videos": [{"ytId": "hHCo9UGxHS0", "label": "本編", "title": "[SAKURA DRONE 4K] 石部桜（Ishibe Zakura）福島県会津若松市｜桜ドローンプロジェクト2026"}]},
@@ -492,37 +488,26 @@ const SakuraMap = (function(){
 })();
 
 /* ===== state ===== */
-let state={region:'all',type:null,query:'',selectedId:null,panelOpen:false,drawerOpen:false,vid:0,playing:false};
+let state={region:'all',query:'',selectedId:null,panelOpen:false,drawerOpen:false,vid:0,playing:false};
 const isMobile=()=>matchMedia('(max-width:760px)').matches;
 const $=id=>document.getElementById(id);
 
 const matchRegion=s=>state.region==='all'||s.region===state.region;
-const matchType=s=>!state.type||s.type===state.type;
 const matchQuery=s=>{const q=state.query.trim().toLowerCase();return !q||(s.name+s.pref+s.city+s.videos.map(v=>v.title).join('')).toLowerCase().includes(q);};
-const filtered=()=>SPOTS.filter(s=>matchRegion(s)&&matchType(s)&&matchQuery(s));
+const filtered=()=>SPOTS.filter(s=>matchRegion(s)&&matchQuery(s));
 
 /* ===== render: header count, chips, type menu ===== */
 function renderCount(n){$('countNum').textContent=n;}
 function renderChips(){
-  const counts={}; SPOTS.filter(s=>matchType(s)&&matchQuery(s)).forEach(s=>counts[s.region]=(counts[s.region]||0)+1);
+  const counts={}; SPOTS.filter(s=>matchQuery(s)).forEach(s=>counts[s.region]=(counts[s.region]||0)+1);
   $('chips').innerHTML = REGIONS.map(r=>{
     const c = r.id!=='all'&&counts[r.id]!=null ? `<span class="chip-count">${counts[r.id]}</span>`:'';
     return `<button class="chip ${state.region===r.id?'active':''}" data-r="${r.id}">${esc(r.label)}${c}</button>`;
   }).join('');
   $('chips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>onRegion(b.dataset.r));
 }
-function renderTypeMenu(){
-  const counts={}; SPOTS.filter(s=>matchRegion(s)&&matchQuery(s)).forEach(s=>counts[s.type]=(counts[s.type]||0)+1);
-  const opt=(id,label,count)=>`<div class="type-opt ${state.type===id?'sel':''}" data-t="${id==null?'':id}"><span class="opt-left"><span class="dot"></span>${esc(label)}</span>${count!=null?`<span class="opt-count">${count}</span>`:''}</div>`;
-  let html=opt(null,'すべての種類',null);
-  html+=SAKURA_TYPES.map(t=>opt(t.id,t.label,counts[t.id]||0)).join('');
-  $('typeMenu').innerHTML=html;
-  $('typeMenu').querySelectorAll('.type-opt').forEach(o=>o.onclick=()=>{onType(o.dataset.t||null);closeTypeMenu();});
-  $('typeBtn').classList.toggle('has-value',!!state.type);
-  $('typeLabel').textContent = state.type?TYPE_LABEL[state.type]:'桜の種類';
-}
 function renderClear(){
-  const any=!!state.type||!!state.query.trim()||state.region!=='all';
+  const any=!!state.query.trim()||state.region!=='all';
   const b=$('clearBtn'); b.hidden=!any;
   b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>絞り込み解除`;
 }
@@ -542,7 +527,7 @@ function renderDrawer(){
     grp.items.map(s=>
       `<div class="list-item ${s.id===state.selectedId?'active':''}" data-id="${s.id}">`+
       `<div class="li-thumb"><div class="lt-img" style="background-image:url(${spotThumb(s)})"></div>${s.videos.length>1?`<span class="li-badge">${s.videos.length}本</span>`:''}</div>`+
-      `<div class="li-body"><div class="li-name">${esc(s.name)}</div><div class="li-meta"><span class="li-loc">${esc(s.pref)} ${esc(s.city)}</span><span class="li-type">${esc(TYPE_LABEL[s.type])}</span></div></div>`+
+      `<div class="li-body"><div class="li-name">${esc(s.name)}</div><div class="li-meta"><span class="li-loc">${esc(s.pref)} ${esc(s.city)}</span></div></div>`+
       `</div>`).join('')
   ).join('');
   box.querySelectorAll('.list-item').forEach(el=>el.onclick=()=>handleSelect(el.dataset.id));
@@ -567,7 +552,7 @@ function renderPanel(){
   panel.innerHTML=
     `<div class="panel-media">${media}<button class="panel-close" id="panelClose" aria-label="閉じる">${ICON.close}</button></div>`+
     `<div class="panel-body">`+
-    `<div class="panel-tags"><span class="tag-pref">${esc(s.pref)}</span><span class="tag-type">${esc(TYPE_LABEL[s.type])}</span></div>`+
+    `<div class="panel-tags"><span class="tag-pref">${esc(s.pref)}</span></div>`+
     `<h2 class="panel-title">${esc(s.name)}</h2>`+
     `<div class="panel-loc">${ICON.pin} ${esc(s.pref)} ${esc(s.city)}</div>`+
     `<div class="panel-meta"><div class="meta-item"><div class="meta-val">${s.videos.length}</div><div class="meta-lab">本の動画</div></div><div class="meta-item"><div class="meta-val">4K</div><div class="meta-lab">空撮品質</div></div></div>`+
@@ -593,24 +578,17 @@ function handleSelect(id){
 function closePanel(){state.panelOpen=false;renderPanel();SakuraMap.clearSelection();setTimeout(()=>{state.selectedId=null;renderDrawer();},200);}
 function onRegion(id){
   state.region=id;
-  const next=SPOTS.filter(s=>(id==='all'||s.region===id)&&matchType(s)&&matchQuery(s));
+  const next=SPOTS.filter(s=>(id==='all'||s.region===id)&&matchQuery(s));
   SakuraMap.setData(filtered()); if(state.selectedId)SakuraMap.select(state.selectedId,false);
   SakuraMap.fitRegion(next); refreshChrome();renderDrawer();
-}
-function onType(t){
-  state.type=t;
-  SakuraMap.setData(filtered()); if(state.selectedId)SakuraMap.select(state.selectedId,false);
-  refreshChrome();renderTypeMenu();renderDrawer();
 }
 function onQuery(q){
   state.query=q;
   SakuraMap.setData(filtered()); if(state.selectedId)SakuraMap.select(state.selectedId,false);
-  refreshChrome();renderTypeMenu();renderDrawer();
+  refreshChrome();renderDrawer();
 }
-function clearAll(){state.region='all';state.type=null;state.query='';$('search').value='';SakuraMap.setData(SPOTS);SakuraMap.fitRegion(SPOTS);refreshChrome();renderTypeMenu();renderDrawer();}
+function clearAll(){state.region='all';state.query='';$('search').value='';SakuraMap.setData(SPOTS);SakuraMap.fitRegion(SPOTS);refreshChrome();renderDrawer();}
 function syncDrawer(){$('drawer').className='drawer'+(state.drawerOpen?' open':'');$('scrim').className='scrim'+(state.drawerOpen&&isMobile()?' show':'');}
-function openTypeMenu(){$('typeSelect').classList.add('open');$('typeMenu').hidden=false;}
-function closeTypeMenu(){$('typeSelect').classList.remove('open');$('typeMenu').hidden=true;}
 
 /* ===== petals ===== */
 function buildPetals(){
@@ -631,14 +609,12 @@ $('scrim').onclick=()=>{state.drawerOpen=false;syncDrawer();};
 $('clearBtn').onclick=clearAll;
 $('search').oninput=e=>onQuery(e.target.value);
 $('drawerSearch').oninput=renderDrawer;
-$('typeBtn').onclick=()=>{$('typeSelect').classList.contains('open')?closeTypeMenu():openTypeMenu();};
-document.addEventListener('mousedown',e=>{if(!$('typeSelect').contains(e.target))closeTypeMenu();});
 
 /* ===== boot ===== */
 SakuraMap.init({onSelect:handleSelect});
 SakuraMap.setData(SPOTS);
 buildPetals();
-renderChips();renderTypeMenu();renderClear();renderCount(SPOTS.length);renderDrawer();
+renderChips();renderClear();renderCount(SPOTS.length);renderDrawer();
 
 const deepId=new URLSearchParams(location.search).get('spot');
 const deepSpot=deepId?SPOTS.find(s=>s.videos.some(v=>v.ytId===deepId)):null;
