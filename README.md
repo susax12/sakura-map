@@ -13,7 +13,7 @@
 |---|---|
 | `index.html` | 本体（地図・データ・UI 全部入りの単一HTML） |
 | `design.md` | HP由来のデザインガイド＋会社HPへの移植方針 |
-| `assets/logo_white.svg` | 会社公式ロゴ |
+| `assets/logo_de.svg` | 会社公式ロゴ（白テキスト＋赤ドローンアイコン、HP配色準拠） |
 
 ## データ更新
 
