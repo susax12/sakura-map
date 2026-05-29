@@ -3,523 +3,649 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>桜ドローンプロジェクト 桜マップ | DRONE ENTERTAINMENT</title>
+<title>桜マップ | SAKURA DRONE PROJECT — DRONE ENTERTAINMENT</title>
 <meta name="description" content="全国の名桜をドローンで4K空撮。日本地図から撮影地を選んで桜の空撮映像を視聴できる、桜ドローンプロジェクトのマップ。">
 
-<!-- Fonts (company HP と同一: Lato + Noto Sans JP) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 
-<!-- Leaflet (地図) -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
 <style>
-  :root {
-    /* ブランド (drone-entertainment.co.jp 由来) */
-    --brand-red: #DA0000;
-    --ink: #222222;
-    --bg: #ffffff;
-    --bg-alt: #F6F6F6;
-    --bg-dark: #1a1a1a;
-    --muted: #8c8f9a;
-    --line: #e7e7ea;
-    /* 桜テーマ (ピン・装飾) */
-    --sakura: #f7a8c4;
-    --sakura-deep: #e26d9b;
-    --panel-w: 430px;
-    --en: "Lato", sans-serif;
-    --jp: "Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; font-family: var(--jp); color: var(--ink); }
-  body { overflow: hidden; }
+:root{
+  --font-display:"Shippori Mincho B1",serif;
+  --font-ui:"Zen Kaku Gothic New",system-ui,sans-serif;
+  --sakura:oklch(0.75 0.085 5);
+  --sakura-deep:oklch(0.6 0.135 9);
+  --sakura-ink:oklch(0.5 0.13 10);
+  --sakura-wash:oklch(0.93 0.03 4);
+  --paper:oklch(0.985 0.008 78);
+  --paper-2:oklch(0.962 0.012 72);
+  --ink:oklch(0.27 0.014 40);
+  --ink-soft:oklch(0.46 0.012 40);
+  --ink-faint:oklch(0.62 0.01 40);
+  --line:oklch(0.9 0.008 60);
+  --line-soft:oklch(0.93 0.006 60);
+  --chrome-bg:rgba(255,252,248,0.84);
+  --chrome-fg:var(--ink);
+  --chrome-line:oklch(0.9 0.01 40 / 0.7);
+  --map-filter:saturate(0.6) brightness(1.05) contrast(0.95) sepia(0.04);
+  --shadow-card:0 1px 2px rgba(40,30,35,.05),0 8px 28px -10px rgba(60,30,45,.22);
+  --shadow-pop:0 2px 4px rgba(40,30,35,.08),0 20px 50px -16px rgba(70,25,50,.32);
+  --radius:16px; --radius-sm:11px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;font-family:var(--font-ui);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+#map{position:fixed;inset:0;background:var(--paper-2);z-index:0;}
+.leaflet-tile-pane{filter:var(--map-filter);transition:filter .5s ease;}
+.leaflet-container{background:var(--paper-2);font-family:var(--font-ui);}
+.leaflet-container a{color:var(--sakura-deep);}
+.leaflet-div-icon{background:transparent;border:none;}
+.cl-wrap,.pin-wrap{background:transparent!important;border:none!important;}
 
-  /* ===== Header ===== */
-  header {
-    position: absolute; top: 0; left: 0; right: 0; height: 64px; z-index: 1100;
-    display: flex; align-items: center; gap: 16px; padding: 0 20px;
-    background: var(--bg-dark); color: #fff;
-  }
-  header .brand { display: flex; align-items: center; height: 100%; }
-  header .logo-img { height: 24px; width: auto; display: block; }
-  header .page-title {
-    display: flex; flex-direction: column; line-height: 1.25;
-    border-left: 1px solid #3a3a3a; padding-left: 16px;
-  }
-  header .page-title .pt-main { font-size: 14px; font-weight: 700; }
-  header .page-title .pt-sub { font-size: 11px; color: #9a9aa0; letter-spacing: .03em; }
-  header .count { margin-left: auto; font-family: var(--en); font-size: 12px; color: #9a9aa0; letter-spacing: .05em; }
-  header .count b { color: #fff; font-size: 18px; font-weight: 900; }
+/* chrome */
+.chrome{position:fixed;inset:0;pointer-events:none;z-index:500;}
+.chrome>*{pointer-events:auto;}
+.topbar{position:absolute;top:14px;left:14px;right:14px;display:flex;align-items:center;gap:18px;padding:11px 18px;background:var(--chrome-bg);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--chrome-line);border-radius:var(--radius);box-shadow:var(--shadow-card);color:var(--chrome-fg);}
+.brand{display:flex;align-items:center;flex-shrink:0;text-decoration:none;}
+.brand-logo{height:26px;width:auto;display:block;}
+.title-block{border-left:1px solid var(--chrome-line);padding-left:18px;min-width:0;flex:1;}
+.title-main{display:flex;align-items:baseline;gap:10px;font-family:var(--font-display);font-weight:600;font-size:19px;line-height:1.1;letter-spacing:.04em;}
+.title-petal{color:var(--sakura-deep);font-size:15px;}
+.title-sub{font-size:11.5px;color:var(--ink-soft);margin-top:3px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.count-block{flex-shrink:0;text-align:right;line-height:1;}
+.count-num{font-family:var(--font-display);font-weight:700;font-size:26px;color:var(--sakura-deep);letter-spacing:.01em;}
+.count-label{font-size:9.5px;letter-spacing:.24em;color:var(--ink-faint);margin-top:5px;font-weight:600;}
 
-  /* ===== Region filter ===== */
-  #filters {
-    position: absolute; top: 76px; left: 12px; z-index: 1050;
-    display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 24px);
-  }
-  .chip {
-    border: 1px solid var(--line); background: #fff; color: var(--ink);
-    border-radius: 999px; padding: 6px 14px; font-size: 12.5px; font-weight: 500; cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0,0,0,.08); transition: .12s; user-select: none;
-  }
-  .chip:hover { border-color: var(--brand-red); }
-  .chip.active { background: var(--brand-red); color: #fff; border-color: var(--brand-red); }
+/* filter bar */
+.filterbar{position:absolute;top:86px;left:14px;right:14px;display:flex;align-items:center;gap:10px;flex-wrap:nowrap;}
+.region-scroll{display:flex;gap:7px;align-items:center;overflow-x:auto;overflow-y:hidden;padding:3px 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.region-scroll::-webkit-scrollbar{display:none;}
+.chip{flex-shrink:0;font-family:var(--font-ui);font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--chrome-fg);background:var(--chrome-bg);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border:1px solid var(--chrome-line);border-radius:999px;padding:8px 16px;cursor:pointer;transition:all .18s ease;white-space:nowrap;box-shadow:var(--shadow-card);display:inline-flex;align-items:center;gap:7px;}
+.chip:hover{transform:translateY(-1px);border-color:var(--sakura);}
+.chip.active{background:var(--sakura-deep);color:#fff;border-color:var(--sakura-deep);}
+.chip .chip-count{font-size:10.5px;font-weight:700;opacity:.62;font-variant-numeric:tabular-nums;}
+.chip.active .chip-count{opacity:.78;}
+.filter-spacer{flex:1;min-width:8px;}
+.tools{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.search{display:flex;align-items:center;gap:8px;background:var(--chrome-bg);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border:1px solid var(--chrome-line);border-radius:999px;padding:8px 14px;box-shadow:var(--shadow-card);transition:all .18s ease;width:184px;}
+.search:focus-within{border-color:var(--sakura);width:224px;}
+.search svg{width:15px;height:15px;color:var(--ink-faint);flex-shrink:0;}
+.search input{border:none;background:none;outline:none;font-family:var(--font-ui);font-size:13px;color:var(--chrome-fg);width:100%;}
+.search input::placeholder{color:var(--ink-faint);}
+.type-select{position:relative;flex-shrink:0;}
+.type-btn{display:flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--chrome-fg);background:var(--chrome-bg);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border:1px solid var(--chrome-line);border-radius:999px;padding:8px 13px 8px 15px;cursor:pointer;white-space:nowrap;box-shadow:var(--shadow-card);transition:all .18s ease;}
+.type-btn:hover{border-color:var(--sakura);}
+.type-btn.has-value{background:var(--sakura-wash);border-color:var(--sakura);color:var(--sakura-ink);}
+.type-btn .caret{width:11px;height:11px;opacity:.6;transition:transform .2s;}
+.type-select.open .caret{transform:rotate(180deg);}
+.type-menu[hidden]{display:none;}
+.type-menu{position:absolute;top:calc(100% + 8px);right:0;background:var(--chrome-bg);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);border:1px solid var(--chrome-line);border-radius:14px;box-shadow:var(--shadow-pop);padding:7px;min-width:204px;display:flex;flex-direction:column;gap:2px;z-index:30;animation:pop .16s ease;}
+@keyframes pop{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+.type-opt{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;font-weight:500;color:var(--chrome-fg);padding:9px 12px;border-radius:9px;cursor:pointer;transition:background .14s;}
+.type-opt:hover{background:var(--paper-2);}
+.type-opt.sel{color:var(--sakura-deep);font-weight:700;}
+.type-opt .dot{width:8px;height:8px;border-radius:50%;background:var(--sakura);opacity:0;flex-shrink:0;}
+.type-opt.sel .dot{opacity:1;}
+.type-opt .opt-left{display:flex;align-items:center;gap:8px;}
+.type-opt .opt-count{font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+.clear-filters[hidden]{display:none;}
+.clear-filters{flex-shrink:0;font-size:12px;font-weight:600;color:var(--sakura-ink);background:none;border:none;cursor:pointer;padding:8px 6px;letter-spacing:.03em;display:inline-flex;align-items:center;gap:5px;}
+.clear-filters:hover{text-decoration:underline;}
 
-  /* ===== Map ===== */
-  #map { position: absolute; inset: 0; top: 64px; z-index: 1; background: #eaf0f2; }
+/* zoom + list */
+.zoomctl{position:absolute;left:16px;bottom:84px;display:flex;flex-direction:column;background:var(--chrome-bg);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border:1px solid var(--chrome-line);border-radius:13px;overflow:hidden;box-shadow:var(--shadow-card);}
+.zoomctl button{width:40px;height:40px;border:none;background:none;color:var(--chrome-fg);font-size:19px;cursor:pointer;display:grid;place-items:center;transition:background .14s;font-family:var(--font-ui);}
+.zoomctl button:hover{background:var(--paper-2);color:var(--sakura-deep);}
+.zoomctl button:first-child{border-bottom:1px solid var(--chrome-line);}
+.list-toggle{position:absolute;left:16px;bottom:22px;display:flex;align-items:center;gap:9px;font-family:var(--font-ui);font-size:13.5px;font-weight:600;letter-spacing:.04em;color:var(--chrome-fg);background:var(--chrome-bg);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border:1px solid var(--chrome-line);border-radius:999px;padding:11px 18px 11px 16px;cursor:pointer;box-shadow:var(--shadow-card);transition:all .18s ease;}
+.list-toggle:hover{transform:translateY(-1px);border-color:var(--sakura);}
+.list-toggle svg{width:16px;height:16px;color:var(--sakura-deep);}
 
-  .sakura-thumb { width: 48px; height: 48px; position: relative; cursor: pointer; }
-  .sakura-thumb img {
-    width: 48px; height: 48px; object-fit: cover; border-radius: 10px; display: block;
-    border: 3px solid var(--sakura-deep); background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.35);
-    transition: transform .12s, border-color .12s;
-  }
-  .sakura-thumb:hover img { transform: scale(1.1); border-color: var(--brand-red); }
-  .sakura-thumb::after {
-    content: ''; position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
-    border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 8px solid var(--sakura-deep);
-  }
-  .sakura-thumb .bud {
-    position: absolute; top: -9px; left: -7px; font-size: 15px; line-height: 1;
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,.3));
-  }
-  .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large { background: rgba(226,109,155,.35); }
-  .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div { background: var(--sakura-deep); color:#fff; font-weight:700; }
+/* petals */
+.petal-layer{position:fixed;inset:0;z-index:450;pointer-events:none;overflow:hidden;}
+.petal{position:absolute;top:0;background:radial-gradient(circle at 68% 30%,oklch(0.9 0.05 6 / 0.92),oklch(0.8 0.095 7 / 0.85));border-radius:100% 0 100% 0;animation-name:petalfall;animation-timing-function:ease-in-out;animation-iteration-count:infinite;will-change:transform;}
+@keyframes petalfall{0%{transform:translate(0,-14vh) rotate(0);}25%{transform:translate(var(--sway),26vh) rotate(95deg);}50%{transform:translate(0,56vh) rotate(185deg);}75%{transform:translate(calc(var(--sway) * -1),84vh) rotate(280deg);}100%{transform:translate(0,114vh) rotate(370deg);}}
+@media (prefers-reduced-motion:reduce){.petal-layer{display:none;}}
 
-  /* ===== Detail panel ===== */
-  #panel {
-    position: absolute; top: 64px; right: 0; bottom: 0; width: var(--panel-w); z-index: 1080;
-    background: #fff; box-shadow: -4px 0 28px rgba(0,0,0,.14);
-    transform: translateX(100%); transition: transform .28s cubic-bezier(.4,0,.2,1);
-    display: flex; flex-direction: column; overflow-y: auto;
-  }
-  #panel.open { transform: translateX(0); }
-  #panel .close {
-    position: absolute; top: 10px; right: 12px; z-index: 2; width: 32px; height: 32px;
-    border: none; border-radius: 50%; background: rgba(0,0,0,.5); color: #fff; font-size: 18px; cursor: pointer;
-  }
-  .video-wrap { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; }
-  .video-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-  #panel .body { padding: 20px 22px 32px; }
-  #panel .pref {
-    display:inline-block; font-family: var(--en); font-size:11px; color:#fff; font-weight:700;
-    background:var(--brand-red); padding:3px 11px; border-radius:999px; letter-spacing:.03em;
-  }
-  #panel h2 { margin: 12px 0 4px; font-size: 22px; font-weight: 700; line-height: 1.35; }
-  #panel .meta { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
-  #panel .project-tag {
-    display:inline-block; font-family:var(--en); font-size:10.5px; letter-spacing:.06em; color:var(--sakura-deep);
-    background:#fdeef4; border:1px solid #f6d3e1; padding:3px 9px; border-radius:6px; margin-top:6px;
-  }
-  #panel .yt-link {
-    display:inline-flex; align-items:center; gap:6px; margin-top:18px; font-size:13px; color:#fff;
-    background:var(--brand-red); text-decoration:none; font-weight:700; padding:10px 16px; border-radius:8px;
-  }
-  #panel .yt-link:hover { background:#b80000; }
-  /* 動画切替ストリップ (1スポット複数動画) */
-  #panel .switch { display:none; gap:8px; margin:4px 0 14px; overflow-x:auto; padding-bottom:4px; }
-  #panel .switch.show { display:flex; }
-  #panel .switch .vthumb {
-    flex:0 0 auto; width:104px; cursor:pointer; border-radius:8px; overflow:hidden;
-    border:2px solid transparent; background:#000; transition:border-color .12s;
-  }
-  #panel .switch .vthumb.active { border-color:var(--brand-red); }
-  #panel .switch .vthumb:hover { border-color:var(--sakura-deep); }
-  #panel .switch .vthumb img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
-  #panel .switch .vthumb .vlabel {
-    font-size:10px; color:#fff; background:#222; padding:3px 5px; line-height:1.3;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-  /* ピンの動画本数バッジ */
-  .sakura-thumb .vcount {
-    position:absolute; top:-8px; right:-8px; min-width:18px; height:18px; padding:0 4px;
-    background:var(--brand-red); color:#fff; font-size:11px; font-weight:700; line-height:18px;
-    text-align:center; border-radius:9px; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.3);
-  }
+/* markers */
+.cl{display:grid;place-items:center;cursor:pointer;}
+.cl-ring{position:relative;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 50% 42%,oklch(0.8 0.1 5 / 0.55),oklch(0.74 0.12 6 / 0.3) 62%,transparent 72%);}
+.cl-core{display:grid;place-items:center;border-radius:50%;background:var(--sakura-deep);color:#fff;font-family:var(--font-ui);font-weight:700;box-shadow:0 4px 14px -3px oklch(0.55 0.16 8 / 0.6),inset 0 0 0 2px rgba(255,255,255,.35);font-variant-numeric:tabular-nums;transition:transform .18s ease;}
+.cl:hover .cl-core{transform:scale(1.06);}
+.pin{position:relative;cursor:pointer;filter:drop-shadow(0 6px 14px rgba(70,25,50,.28));transition:transform .16s ease;}
+.pin:hover{transform:translateY(-3px) scale(1.03);z-index:1000!important;}
+.pin-card{width:86px;height:58px;border-radius:11px;overflow:hidden;border:2.5px solid #fff;position:relative;background:var(--paper-2);}
+.pin-thumb{position:absolute;inset:0;background-size:cover;background-position:center;}
+.pin-pref{position:absolute;left:0;top:0;bottom:0;width:22px;display:grid;place-items:center;background:linear-gradient(90deg,rgba(20,12,18,.62),rgba(20,12,18,.12));color:#fff;font-family:var(--font-display);font-size:10px;font-weight:600;writing-mode:vertical-rl;letter-spacing:.08em;text-shadow:0 1px 2px rgba(0,0,0,.5);}
+.pin-badge{position:absolute;top:-7px;right:-7px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--sakura-deep);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;border:2px solid #fff;font-variant-numeric:tabular-nums;}
+.pin-petal{position:absolute;top:-9px;left:-7px;font-size:15px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25));}
+.pin-tail{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:9px solid #fff;}
+.pin.selected .pin-card{border-color:var(--sakura-deep);box-shadow:0 0 0 3px var(--sakura-wash);}
+.pin.selected{transform:translateY(-3px) scale(1.05);}
 
-  /* ===== List toggle ===== */
-  #listBtn {
-    position: absolute; bottom: 20px; left: 12px; z-index: 1050;
-    border: none; background: var(--bg-dark); color: #fff; border-radius: 10px;
-    padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.2);
-  }
-  #list {
-    position: absolute; bottom: 64px; left: 12px; z-index: 1060; width: 300px; max-height: 54vh;
-    overflow-y: auto; background: #fff; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.2);
-    padding: 6px; display: none;
-  }
-  #list.open { display: block; }
-  .list-group { font-family:var(--en); font-size:10.5px; letter-spacing:.08em; color:var(--muted); padding:8px 11px 3px; }
-  .list-item { padding: 8px 11px; border-radius: 8px; cursor: pointer; font-size: 13.5px; }
-  .list-item:hover { background: #fdeef4; }
-  .list-item .li-pref { font-size: 11px; color: var(--muted); }
+/* detail panel */
+.panel{position:absolute;top:0;right:0;bottom:0;width:420px;background:var(--paper);border-left:1px solid var(--line);box-shadow:var(--shadow-pop);z-index:700;display:flex;flex-direction:column;transform:translateX(102%);transition:transform .34s cubic-bezier(.22,1,.36,1);overflow:hidden;}
+.panel.open{transform:none;}
+.panel-media{position:relative;width:100%;aspect-ratio:16/9;background:#000;flex-shrink:0;overflow:hidden;}
+.panel-media .media-img{position:absolute;inset:0;background-size:cover;background-position:center;}
+.panel-media .media-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.32) 0%,transparent 32%,transparent 55%,rgba(0,0,0,.55) 100%);}
+.media-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1.5px solid rgba(255,255,255,.6);display:grid;place-items:center;cursor:pointer;transition:all .2s ease;}
+.media-play:hover{background:var(--sakura-deep);border-color:var(--sakura-deep);transform:translate(-50%,-50%) scale(1.08);}
+.media-play svg{width:24px;height:24px;color:#fff;margin-left:3px;}
+.media-dur{position:absolute;right:12px;bottom:11px;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,.6);padding:3px 8px;border-radius:6px;letter-spacing:.03em;}
+.panel-media iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+.panel-close{position:absolute;top:12px;right:12px;z-index:4;width:34px;height:34px;border-radius:50%;background:rgba(20,16,20,.5);color:#fff;border:none;cursor:pointer;display:grid;place-items:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background .16s;}
+.panel-close:hover{background:var(--sakura-deep);}
+.panel-close svg{width:16px;height:16px;}
+.panel-body{padding:22px 24px 28px;overflow-y:auto;flex:1;}
+.panel-body::-webkit-scrollbar{width:8px;}
+.panel-body::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
+.panel-tags{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+.tag-pref{font-size:11.5px;font-weight:700;letter-spacing:.05em;color:#fff;background:var(--sakura-deep);padding:4px 11px;border-radius:999px;}
+.tag-type{font-size:11.5px;font-weight:600;letter-spacing:.04em;color:var(--sakura-ink);background:var(--sakura-wash);padding:4px 11px;border-radius:999px;border:1px solid var(--sakura);}
+.panel-title{font-family:var(--font-display);font-weight:700;font-size:25px;line-height:1.28;letter-spacing:.01em;color:var(--ink);margin:0 0 6px;text-wrap:pretty;}
+.panel-loc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);margin-bottom:18px;}
+.panel-loc svg{width:14px;height:14px;color:var(--sakura);}
+.panel-meta{display:flex;gap:22px;padding:14px 0 18px;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);margin-bottom:18px;flex-wrap:wrap;}
+.meta-item .meta-val{font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--ink);white-space:nowrap;}
+.meta-item .meta-lab{font-size:10.5px;color:var(--ink-faint);letter-spacing:.12em;margin-top:3px;font-weight:600;}
+.vid-head{font-size:11px;font-weight:700;letter-spacing:.16em;color:var(--ink-faint);margin:4px 0 12px;}
+.vid-list{display:flex;flex-direction:column;gap:9px;margin-bottom:22px;}
+.vid-row{display:flex;gap:12px;align-items:center;padding:8px;border-radius:12px;cursor:pointer;border:1px solid transparent;transition:all .16s;}
+.vid-row:hover{background:var(--paper-2);}
+.vid-row.active{background:var(--sakura-wash);border-color:var(--sakura);}
+.vid-thumb{width:92px;height:52px;border-radius:8px;overflow:hidden;position:relative;flex-shrink:0;background:var(--paper-2);}
+.vid-thumb .vt-img{position:absolute;inset:0;background-size:cover;background-position:center;}
+.vid-thumb .vt-play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.18);}
+.vid-thumb .vt-play svg{width:20px;height:20px;color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));}
+.vid-info{min-width:0;}
+.vid-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--sakura-deep);margin-bottom:3px;}
+.vid-title{font-size:13px;font-weight:500;color:var(--ink);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.btn-yt{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:#ff0033;color:#fff;font-family:var(--font-ui);font-weight:700;font-size:14.5px;letter-spacing:.03em;border:none;border-radius:12px;cursor:pointer;text-decoration:none;box-shadow:0 8px 22px -8px rgba(255,0,51,.6);transition:transform .16s,box-shadow .16s;}
+.btn-yt:hover{transform:translateY(-2px);box-shadow:0 12px 28px -8px rgba(255,0,51,.7);}
+.btn-yt svg{width:22px;height:22px;}
+.panel-share{display:flex;gap:8px;margin-top:12px;}
+.share-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px;font-size:12.5px;font-weight:600;color:var(--ink-soft);background:var(--paper-2);border:1px solid var(--line);border-radius:11px;cursor:pointer;transition:all .16s;}
+.share-btn:hover{border-color:var(--sakura);color:var(--sakura-ink);}
+.share-btn svg{width:15px;height:15px;}
 
-  @media (max-width: 720px) {
-    :root { --panel-w: 100%; }
-    header .tagline { display: none; }
-    #panel { top: auto; bottom: 0; height: 80%; border-radius: 18px 18px 0 0; transform: translateY(100%); }
-    #panel.open { transform: translateY(0); }
-    #list { width: calc(100% - 24px); }
-  }
+/* list drawer */
+.drawer{position:absolute;top:0;left:0;bottom:0;width:372px;background:var(--paper);border-right:1px solid var(--line);box-shadow:var(--shadow-pop);z-index:650;display:flex;flex-direction:column;transform:translateX(-103%);transition:transform .32s cubic-bezier(.22,1,.36,1);}
+.drawer.open{transform:none;}
+.drawer-head{padding:20px 22px 14px;border-bottom:1px solid var(--line-soft);flex-shrink:0;}
+.drawer-title{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-display);font-weight:700;font-size:18px;letter-spacing:.04em;margin-bottom:14px;}
+.drawer-close{background:none;border:none;cursor:pointer;color:var(--ink-faint);padding:4px;display:grid;place-items:center;}
+.drawer-close:hover{color:var(--sakura-deep);}
+.drawer-close svg{width:18px;height:18px;}
+.drawer-search{display:flex;align-items:center;gap:9px;background:var(--paper-2);border:1px solid var(--line);border-radius:11px;padding:10px 13px;}
+.drawer-search:focus-within{border-color:var(--sakura);}
+.drawer-search svg{width:15px;height:15px;color:var(--ink-faint);}
+.drawer-search input{border:none;background:none;outline:none;font-family:var(--font-ui);font-size:13.5px;color:var(--ink);width:100%;}
+.drawer-search input::placeholder{color:var(--ink-faint);}
+.drawer-list{overflow-y:auto;flex:1;padding:8px 12px 16px;}
+.drawer-list::-webkit-scrollbar{width:8px;}
+.drawer-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
+.region-head{font-size:10.5px;font-weight:700;letter-spacing:.18em;color:var(--sakura-deep);padding:16px 10px 8px;position:sticky;top:0;background:var(--paper);z-index:2;}
+.region-head:first-child{padding-top:6px;}
+.region-head .rh-count{color:var(--ink-faint);font-weight:600;margin-left:6px;}
+.list-item{display:flex;gap:12px;align-items:center;padding:9px 10px;border-radius:12px;cursor:pointer;transition:background .14s;border:1px solid transparent;}
+.list-item:hover{background:var(--paper-2);}
+.list-item.active{background:var(--sakura-wash);border-color:var(--sakura);}
+.li-thumb{width:64px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;position:relative;background:var(--paper-2);}
+.li-thumb .lt-img{position:absolute;inset:0;background-size:cover;background-position:center;}
+.li-badge{position:absolute;right:3px;bottom:3px;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.62);padding:1px 5px;border-radius:5px;}
+.li-body{min-width:0;flex:1;}
+.li-name{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.3;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.li-meta{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.li-loc{font-size:11px;color:var(--ink-faint);}
+.li-type{font-size:10px;font-weight:600;color:var(--sakura-ink);background:var(--sakura-wash);padding:1px 7px;border-radius:999px;white-space:nowrap;}
+.list-empty{text-align:center;padding:50px 20px;color:var(--ink-faint);font-size:13px;}
+.list-empty .le-petal{font-size:30px;display:block;margin-bottom:12px;opacity:.6;}
+.scrim{position:absolute;inset:0;background:rgba(20,14,18,.28);z-index:640;opacity:0;pointer-events:none;transition:opacity .3s;-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px);}
+.scrim.show{opacity:1;pointer-events:auto;}
+
+@media (max-width:760px){
+  .topbar{top:10px;left:10px;right:10px;gap:12px;padding:9px 14px;}
+  .title-block{padding-left:12px;}
+  .title-main{font-size:16px;}
+  .title-sub{display:none;}
+  .count-num{font-size:20px;}
+  .count-label{font-size:8.5px;letter-spacing:.18em;}
+  .filterbar{top:66px;left:0;right:0;flex-direction:column;align-items:stretch;gap:8px;}
+  .region-scroll{padding:2px 10px;}
+  .tools{padding:0 10px;gap:8px;}
+  .search{flex:1;width:auto;}
+  .search:focus-within{width:auto;}
+  .panel{width:100%;top:auto;height:88%;border-left:none;border-top-left-radius:22px;border-top-right-radius:22px;transform:translateY(101%);border-top:1px solid var(--line);}
+  .panel.open{transform:none;}
+  .panel::before{content:"";position:absolute;top:9px;left:50%;transform:translateX(-50%);width:44px;height:5px;border-radius:999px;background:rgba(255,255,255,.7);z-index:5;}
+  .drawer{width:100%;max-width:420px;}
+  .zoomctl{display:none;}
+  .list-toggle{left:50%;transform:translateX(-50%);bottom:18px;}
+  .list-toggle:hover{transform:translateX(-50%) translateY(-1px);}
+}
+@media (max-width:420px){ .title-jp-long{display:none;} }
 </style>
 </head>
 <body>
 
-<header>
-  <a class="brand" href="https://drone-entertainment.co.jp/" target="_blank" rel="noopener" title="DRONE ENTERTAINMENT">
-    <img class="logo-img" src="assets/logo_de.svg" alt="DRONE ENTERTAINMENT">
-  </a>
-  <div class="page-title">
-    <span class="pt-main">🌸 桜ドローンプロジェクト 桜マップ</span>
-    <span class="pt-sub">全国の名桜を、4K空撮で。地図から選んで視聴できます。</span>
-  </div>
-  <div class="count"><b id="spotCount">0</b> SPOTS</div>
-</header>
-
-<div id="filters"></div>
 <div id="map"></div>
 
-<button id="listBtn">📍 撮影地一覧</button>
-<div id="list"></div>
+<div class="chrome">
+  <header class="topbar">
+    <a class="brand" href="https://drone-entertainment.co.jp/" target="_blank" rel="noopener" title="DRONE ENTERTAINMENT">
+      <img class="brand-logo" src="assets/logo_dark.svg" alt="DRONE ENTERTAINMENT">
+    </a>
+    <div class="title-block">
+      <div class="title-main"><span class="title-petal">❀</span><span>桜マップ</span></div>
+      <div class="title-sub">全国の名桜を、4K空撮で。地図から選んで視聴できます。</div>
+    </div>
+    <div class="count-block">
+      <div class="count-num" id="countNum">0</div>
+      <div class="count-label">SPOTS</div>
+    </div>
+  </header>
 
-<aside id="panel">
-  <button class="close" onclick="closePanel()">×</button>
-  <div class="video-wrap"><iframe id="ytFrame" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
-  <div class="body">
-    <span class="pref" id="pPref"></span>
-    <h2 id="pTitle"></h2>
-    <div class="meta" id="pMeta"></div>
-    <div id="pSwitch" class="switch"></div>
-    <div class="project-tag">SAKURA DRONE PROJECT</div><br>
-    <a class="yt-link" id="pLink" href="#" target="_blank" rel="noopener">▶ YouTube で見る</a>
+  <div class="filterbar">
+    <div class="region-scroll" id="chips"></div>
+    <div class="filter-spacer"></div>
+    <div class="tools">
+      <button class="clear-filters" id="clearBtn" hidden></button>
+      <div class="type-select" id="typeSelect">
+        <button class="type-btn" id="typeBtn"><span id="typeLabel">桜の種類</span><svg class="caret" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="type-menu" id="typeMenu" hidden></div>
+      </div>
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="search" placeholder="名所・地名で検索">
+      </label>
+    </div>
   </div>
-</aside>
 
-<!-- Leaflet JS -->
+  <div class="zoomctl"><button id="zin" aria-label="拡大">＋</button><button id="zout" aria-label="縮小">－</button></div>
+  <button class="list-toggle" id="listToggle">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M8 7h12M8 12h12M8 17h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4" cy="7" r="1.4" fill="currentColor"/><circle cx="4" cy="12" r="1.4" fill="currentColor"/><circle cx="4" cy="17" r="1.4" fill="currentColor"/></svg>
+    撮影地一覧
+  </button>
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head">
+      <div class="drawer-title"><span>撮影地一覧</span>
+        <button class="drawer-close" id="drawerClose"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      </div>
+      <label class="drawer-search">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="drawerSearch" placeholder="一覧から探す">
+      </label>
+    </div>
+    <div class="drawer-list" id="drawerList"></div>
+  </aside>
+
+  <aside class="panel" id="panel"></aside>
+</div>
+
+<div class="petal-layer" id="petals" aria-hidden="true"></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-
 <script>
-/* =========================================================================
-   撮影地データ — YouTube @drone-entertainment 全公開動画から抽出 (134スポット)
-   -------------------------------------------------------------------------
-   除外: オンライン花見(2) / プロジェクト紹介・総集編(8) / 非桜のFPV撮影(6) = 16本
-   youtubeId : YouTube動画ID
-   lat/lng   : 市町村レベルの概算座標 (Nominatim)。正確な木の位置は追って補正可
-   同一スポットの複数年・Short/Long は個別ピン (近接はクラスタに集約)
-   ========================================================================= */
+const REGIONS = [{"id": "all", "label": "すべて"}, {"id": "hokkaido", "label": "北海道"}, {"id": "tohoku", "label": "東北"}, {"id": "kanto", "label": "関東"}, {"id": "chubu", "label": "中部"}, {"id": "kinki", "label": "近畿"}, {"id": "chugoku", "label": "中国"}, {"id": "shikoku", "label": "四国"}, {"id": "kyushu", "label": "九州・沖縄"}];
+const SAKURA_TYPES = [{"id": "someiyoshino", "label": "ソメイヨシノ"}, {"id": "shidare", "label": "シダレザクラ"}, {"id": "yamazakura", "label": "ヤマザクラ"}, {"id": "yaezakura", "label": "ヤエザクラ"}, {"id": "edohigan", "label": "エドヒガン"}, {"id": "kanhizakura", "label": "カンヒザクラ"}, {"id": "chishima", "label": "チシマザクラ"}, {"id": "kumanozakura", "label": "クマノザクラ"}];
+const TYPE_LABEL = {"someiyoshino": "ソメイヨシノ", "shidare": "シダレザクラ", "yamazakura": "ヤマザクラ", "yaezakura": "ヤエザクラ", "edohigan": "エドヒガン", "kanhizakura": "カンヒザクラ", "chishima": "チシマザクラ", "kumanozakura": "クマノザクラ"};
+const REGION_LABEL = {"all": "すべて", "hokkaido": "北海道", "tohoku": "東北", "kanto": "関東", "chubu": "中部", "kinki": "近畿", "chugoku": "中国", "shikoku": "四国", "kyushu": "九州・沖縄"};
 const SPOTS = [
-  { id:'DH1ZchOIPCs', name:'清隆寺のチシマザクラ', pref:'北海道', city:'根室市', region:'北海道', lat:43.33015, lng:145.58339, youtubeId:'DH1ZchOIPCs' },
-  { id:'-50Vpa-xC0c', name:'野付の千島桜', pref:'北海道', city:'別海町', region:'北海道', lat:43.39406, lng:145.11708, youtubeId:'-50Vpa-xC0c' },
-  { id:'Uk2EZjtp8_Y', name:'はやしの桜', pref:'北海道', city:'別海町', region:'北海道', lat:43.38669, lng:145.12383, youtubeId:'Uk2EZjtp8_Y' },
-  { id:'8oQM6e3I0HU', name:'国泰寺の老桜樹', pref:'北海道', city:'厚岸町', region:'北海道', lat:43.05182, lng:144.84769, youtubeId:'8oQM6e3I0HU' },
-  { id:'VYwJMkMjGn0', name:'松前城・松前公園の桜見本園', pref:'北海道', city:'', region:'北海道', lat:41.42936, lng:140.10787, youtubeId:'VYwJMkMjGn0' },
-  { id:'ZUVppAak2C4', name:'筆甫のウバヒガン桜', pref:'宮城県', city:'丸森町', region:'東北', lat:37.91147, lng:140.7652, youtubeId:'ZUVppAak2C4' },
-  { id:'PnCTS8auk2o', name:'白石市材木岩公園', pref:'宮城県', city:'白石市', region:'東北', lat:38.00237, lng:140.62002, youtubeId:'PnCTS8auk2o' },
-  { id:'zo6MU2i6ytI', name:'竜神桜', pref:'山形県', city:'上山市', region:'東北', lat:38.21834, lng:140.33815, youtubeId:'zo6MU2i6ytI' },
-  { id:'cRkNfIZDs-M', name:'伊佐沢の久保ザクラと草岡の大明神ザクラ', pref:'山形県', city:'長井市', region:'東北', lat:38.10636, lng:140.0339, youtubeId:'cRkNfIZDs-M' },
-  { id:'lY53ca126J4', name:'白鷹町 釜の越桜', pref:'山形県', city:'白鷹町', region:'東北', lat:38.18301, lng:140.09836, youtubeId:'lY53ca126J4' },
-  { id:'CFGgcFH-xAg', name:'南陽市 烏帽子山公園, 双松公園', pref:'山形県', city:'南陽市', region:'東北', lat:38.05102, lng:140.16488, youtubeId:'CFGgcFH-xAg' },
-  { id:'QR7ct21dxFs', name:'鶴岡市鶴岡公園', pref:'山形県', city:'', region:'東北', lat:38.72837, lng:139.82428, youtubeId:'QR7ct21dxFs' },
-  { id:'5qMBYQOYCx8', name:'龍谷寺のモリオカシダレ', pref:'岩手県', city:'盛岡市', region:'東北', lat:39.71074, lng:141.15448, youtubeId:'5qMBYQOYCx8' },
-  { id:'re3ArOkFFMo', name:'高松公園, 福泉寺の桜', pref:'岩手県', city:'', region:'東北', lat:39.57138, lng:141.42536, youtubeId:'re3ArOkFFMo' },
-  { id:'8P8pfy3lxt0', name:'慈徳寺の種まき桜', pref:'福島県', city:'福島市', region:'東北', lat:37.76078, lng:140.47458, youtubeId:'8P8pfy3lxt0' },
-  { id:'zOeC4tGXeNE', name:'秋山の駒ザクラ', pref:'福島県', city:'川俣町', region:'東北', lat:37.66497, lng:140.59861, youtubeId:'zOeC4tGXeNE' },
-  { id:'R2kWYqR_-MI', name:'中島の地蔵桜', pref:'福島県', city:'二本松市2', region:'東北', lat:37.58504, lng:140.43139, youtubeId:'R2kWYqR_-MI' },
-  { id:'JgKYW1_ZGRs', name:'祭田のサクラ', pref:'福島県', city:'二本松市2', region:'東北', lat:37.57767, lng:140.43814, youtubeId:'JgKYW1_ZGRs' },
-  { id:'3xrt6306SkI', name:'日向の人待地蔵桜', pref:'福島県', city:'二本松市', region:'東北', lat:37.58626, lng:140.41744, youtubeId:'3xrt6306SkI' },
-  { id:'6QaOvCrPltc', name:'弥明の桜', pref:'福島県', city:'郡山市', region:'東北', lat:37.40494, lng:140.33338, youtubeId:'6QaOvCrPltc' },
-  { id:'hHCo9UGxHS0', name:'石部桜', pref:'福島県', city:'会津若松市', region:'東北', lat:37.51018, lng:139.95423, youtubeId:'hHCo9UGxHS0' },
-  { id:'rXO3zJhyyyQ', name:'田村市の一本桜', pref:'福島県', city:'田村', region:'東北', lat:37.44719, lng:140.49291, youtubeId:'rXO3zJhyyyQ' },
-  { id:'7buYOGi_m70', name:'おしら様の枝垂れ桜', pref:'秋田県', city:'湯沢市', region:'東北', lat:39.1643, lng:140.49575, youtubeId:'7buYOGi_m70' },
-  { id:'pp1VODhQz1k', name:'横手市の真人公園', pref:'秋田県', city:'横手市', region:'東北', lat:39.31378, lng:140.56674, youtubeId:'pp1VODhQz1k' },
-  { id:'FNl82_yIKns', name:'野辺地町愛宕公園の桜', pref:'青森県', city:'野辺地町', region:'東北', lat:40.86449, lng:141.12818, youtubeId:'FNl82_yIKns' },
-  { id:'N132SuBeLBU', name:'八千代市新川千本さくら', pref:'千葉県', city:'八千代市', region:'関東', lat:35.72254, lng:140.09951, youtubeId:'N132SuBeLBU' },
-  { id:'RlwFTn1VZO0', name:'清雲寺のしだれ桜', pref:'埼玉県', city:'秩父市', region:'関東', lat:35.99145, lng:139.08576, youtubeId:'RlwFTn1VZO0' },
-  { id:'ZevXb0G_AXM', name:'西光寺のしだれ桜', pref:'埼玉県', city:'飯能市', region:'関東', lat:35.85569, lng:139.32764, youtubeId:'ZevXb0G_AXM' },
-  { id:'zQil_cb_HSs', name:'本庄市こだま千本桜', pref:'埼玉県', city:'本庄市', region:'関東', lat:36.24359, lng:139.19163, youtubeId:'zQil_cb_HSs' },
-  { id:'VO7CLJ1eeWA', name:'久喜市のカワヅザクラ', pref:'埼玉県', city:'久喜市', region:'関東', lat:36.0618, lng:139.66714, youtubeId:'VO7CLJ1eeWA' },
-  { id:'WMKbFnX1JQc', name:'渋谷区 金王八幡宮の金王桜', pref:'東京都', city:'渋谷区', region:'関東', lat:35.65752, lng:139.70639, youtubeId:'WMKbFnX1JQc' },
-  { id:'_G4zRNbdVLk', name:'小金井市 名勝小金井櫻', pref:'東京都', city:'', region:'関東', lat:35.7126, lng:139.50775, youtubeId:'_G4zRNbdVLk' },
-  { id:'shIpFcNBk1s', name:'小金井市浴恩館のソメイヨシノ', pref:'東京都', city:'小金井市', region:'関東', lat:35.70411, lng:139.51068, youtubeId:'shIpFcNBk1s' },
-  { id:'PMVyOxW3kwc', name:'芳賀郡の花の山', pref:'栃木県', city:'芳賀郡', region:'関東', lat:36.51024, lng:140.12686, youtubeId:'PMVyOxW3kwc' },
-  { id:'-YBYDMVrDuA', name:'長興山紹太寺のしだれ桜', pref:'神奈川県', city:'小田原市', region:'関東', lat:35.26453, lng:139.15225, youtubeId:'-YBYDMVrDuA' },
-  { id:'LDB8qoSpMq4', name:'白泉寺', pref:'神奈川県', city:'秦野市', region:'関東', lat:35.40696, lng:139.17677, youtubeId:'LDB8qoSpMq4' },
-  { id:'LHW-19iFk1I', name:'鎌倉市源氏山公園・銭洗弁財天の桜', pref:'神奈川県', city:'鎌倉市', region:'関東', lat:35.31928, lng:139.54696, youtubeId:'LHW-19iFk1I' },
-  { id:'YPukaNK5bfk', name:'相模原市さがみ湖リゾートプレジャーフォレスト', pref:'神奈川県', city:'', region:'関東', lat:35.6054, lng:139.20756, youtubeId:'YPukaNK5bfk' },
-  { id:'SB2rZzv_j18', name:'妙義神社の桜', pref:'群馬県', city:'', region:'関東', lat:36.52198, lng:139.03348, youtubeId:'SB2rZzv_j18' },
-  { id:'ZwoKIPOyt7U', name:'結城市 桜見本園', pref:'茨城県', city:'結城市', region:'関東', lat:36.30529, lng:139.87714, youtubeId:'ZwoKIPOyt7U' },
-  { id:'Uu9n_ySfrr0', name:'結城農場の桜', pref:'茨城県', city:'', region:'関東', lat:35.89089, lng:140.06875, youtubeId:'Uu9n_ySfrr0' },
-  { id:'g4eKQmaukEs', name:'朝日町の春の四重奏', pref:'富山県', city:'朝日町', region:'中部', lat:36.94566, lng:137.55946, youtubeId:'g4eKQmaukEs' },
-  { id:'sVrb4xvofaE', name:'朝日町の春の四重奏', pref:'富山県', city:'朝日町', region:'中部', lat:36.93829, lng:137.56621, youtubeId:'sVrb4xvofaE' },
-  { id:'sHMDuoAYipA', name:'朝日町の春の四重奏', pref:'富山県', city:'朝日町', region:'中部', lat:36.94688, lng:137.54551, youtubeId:'sHMDuoAYipA' },
-  { id:'FAZiZNxiK6c', name:'本郷の千年桜', pref:'山梨県', city:'南部町', region:'中部', lat:35.24234, lng:138.48592, youtubeId:'FAZiZNxiK6c' },
-  { id:'DAnTFL6Qm7c', name:'原間のイトザクラ', pref:'山梨県', city:'南部町', region:'中部', lat:35.23497, lng:138.49267, youtubeId:'DAnTFL6Qm7c' },
-  { id:'bxTZMbYZALg', name:'内船寺', pref:'山梨県', city:'南部町', region:'中部', lat:35.24356, lng:138.47197, youtubeId:'bxTZMbYZALg' },
-  { id:'QFm_jOdTucA', name:'甲斐善光寺', pref:'山梨県', city:'甲府市', region:'中部', lat:35.66593, lng:138.59289, youtubeId:'QFm_jOdTucA' },
-  { id:'qAg5zoMVxn0', name:'乙ヶ妻のシダレザクラ', pref:'山梨県', city:'山梨市', region:'中部', lat:35.69285, lng:138.68713, youtubeId:'qAg5zoMVxn0' },
-  { id:'YlP8U8vZG2E', name:'山高神代桜北杜市實相寺', pref:'山梨県', city:'北杜市', region:'中部', lat:35.77648, lng:138.42357, youtubeId:'YlP8U8vZG2E' },
-  { id:'YPVjjIMrpVo', name:'西湖いやしの里根場', pref:'山梨県', city:'富士河口湖町', region:'中部', lat:35.4983, lng:138.6856, youtubeId:'YPVjjIMrpVo' },
-  { id:'51CUKa8M03E', name:'忍草山大日院東圓寺', pref:'山梨県', city:'忍野村', region:'中部', lat:35.4592, lng:138.8389, youtubeId:'51CUKa8M03E' },
-  { id:'ZPfGp1S95GU', name:'富士本栖湖リゾートの芝桜', pref:'山梨県', city:'', region:'中部', lat:35.63993, lng:138.63805, youtubeId:'ZPfGp1S95GU' },
-  { id:'kfuH9y09xlk', name:'身延山久遠寺の枝垂れ桜', pref:'山梨県', city:'', region:'中部', lat:35.37167, lng:138.43723, youtubeId:'kfuH9y09xlk' },
-  { id:'84AWc1GRfzU', name:'日本三大桜 淡墨桜本巣市', pref:'岐阜県', city:'本巣市', region:'中部', lat:35.48303, lng:136.67806, youtubeId:'84AWc1GRfzU' },
-  { id:'EJsB_YKlqh4', name:'西尾市黄金堤の桜', pref:'愛知県', city:'西尾市', region:'中部', lat:34.8225, lng:137.06963, youtubeId:'EJsB_YKlqh4' },
-  { id:'GFmBTIcUK6A', name:'吉川三大しだれ桜', pref:'新潟県', city:'上越市', region:'中部', lat:37.14788, lng:138.23595, youtubeId:'GFmBTIcUK6A' },
-  { id:'Cocp6-OLhdM', name:'妙高市経塚山公園の桜', pref:'新潟県', city:'妙高市', region:'中部', lat:37.02525, lng:138.25364, youtubeId:'Cocp6-OLhdM' },
-  { id:'wxOMMFTSxRo', name:'能登鹿島駅', pref:'石川県', city:'', region:'中部', lat:37.18022, lng:136.89825, youtubeId:'wxOMMFTSxRo' },
-  { id:'pBZBzfDcE40', name:'福井市 足羽川桜並木', pref:'福井県', city:'福井市', region:'中部', lat:36.06175, lng:136.22605, youtubeId:'pBZBzfDcE40' },
-  { id:'8Ch0WMzezdo', name:'宇木の千歳桜と区民会館前のしだれ桜', pref:'長野県', city:'山ノ内町', region:'中部', lat:36.74459, lng:138.41266, youtubeId:'8Ch0WMzezdo' },
-  { id:'zrz0GREzJHc', name:'青木村 大宝寺', pref:'長野県', city:'', region:'中部', lat:34.82548, lng:137.5571, youtubeId:'zrz0GREzJHc' },
-  { id:'QjOnpOdlHr0', name:'伊那市高遠城址公園のタカトオコヒガンザクラ', pref:'長野県', city:'伊那市', region:'中部', lat:35.83045, lng:137.95492, youtubeId:'QjOnpOdlHr0' },
-  { id:'z5ZUdfy89-s', name:'潤井川龍巌淵', pref:'静岡県', city:'富士市', region:'中部', lat:35.16185, lng:138.67639, youtubeId:'z5ZUdfy89-s' },
-  { id:'mNStuxe0g6s', name:'新橋浅間神社と桜', pref:'静岡県', city:'御殿場市', region:'中部', lat:35.3088, lng:138.9356, youtubeId:'mNStuxe0g6s' },
-  { id:'-YMqXFKGDyU', name:'時之栖 御殿場市', pref:'静岡県', city:'', region:'中部', lat:35.23497, lng:138.92539, youtubeId:'-YMqXFKGDyU' },
-  { id:'H45JYJt0vtk', name:'秩父宮記念公園御殿場市', pref:'静岡県', city:'', region:'中部', lat:34.93325, lng:138.09554, youtubeId:'H45JYJt0vtk' },
-  { id:'g9k4X8C3wKk', name:'富士市潤井川', pref:'静岡県', city:'富士市', region:'中部', lat:35.15448, lng:138.68314, youtubeId:'g9k4X8C3wKk' },
-  { id:'V1DfwlWsg-g', name:'富士宮市 稲瀬川の桜', pref:'静岡県', city:'富士宮市', region:'中部', lat:35.22373, lng:138.60891, youtubeId:'V1DfwlWsg-g' },
-  { id:'mEnWmC-4VQE', name:'御殿場市秩父宮記念公園のヤエベニシダレ', pref:'静岡県', city:'御殿場市', region:'中部', lat:35.3036, lng:138.9344, youtubeId:'mEnWmC-4VQE' },
-  { id:'RBWss0hRxwA', name:'河津町のカワヅザクラ', pref:'静岡県', city:'河津町', region:'中部', lat:34.74705, lng:138.99243, youtubeId:'RBWss0hRxwA' },
-  { id:'RPQaFkOyuwU', name:'御浜町のクマノザクラ', pref:'三重県', city:'御浜町', region:'近畿', lat:33.83157, lng:136.05499, youtubeId:'RPQaFkOyuwU' },
-  { id:'1Yd2Rhqbqhw', name:'正寿院綴喜郡宇治田原町', pref:'京都府', city:'', region:'近畿', lat:34.94129, lng:135.64882, youtubeId:'1Yd2Rhqbqhw' },
-  { id:'tWK_D3Nl3VU', name:'保津川下り亀岡市〜京都市嵐山', pref:'京都府', city:'府亀岡市', region:'近畿', lat:35.00633, lng:135.54933, youtubeId:'tWK_D3Nl3VU' },
-  { id:'pgsro8u9jZ0', name:'龍安寺京都市右京区', pref:'京都府', city:'', region:'近畿', lat:35.03346, lng:135.71809, youtubeId:'pgsro8u9jZ0' },
-  { id:'xUjdF92M79k', name:'国立京都国際会館京都市左京区', pref:'京都府', city:'', region:'近畿', lat:35.06108, lng:135.78315, youtubeId:'xUjdF92M79k' },
-  { id:'Bxl2t9MWQ0s', name:'和束町 茶畑の一本桜と祝橋の桜並木相楽郡', pref:'京都府', city:'府相楽郡', region:'近畿', lat:34.7735, lng:135.76058, youtubeId:'Bxl2t9MWQ0s' },
-  { id:'LuJpWsxIrG8', name:'花宝苑京都市右京区京北', pref:'京都府', city:'', region:'近畿', lat:35.15518, lng:135.6334, youtubeId:'LuJpWsxIrG8' },
-  { id:'aiNEf7fs5OU', name:'二尊院京都市右京区嵯峨野', pref:'京都府', city:'', region:'近畿', lat:35.01455, lng:135.67479, youtubeId:'aiNEf7fs5OU' },
-  { id:'I4CxxDtXmr0', name:'常寂光寺京都市右京区嵯峨野', pref:'京都府', city:'', region:'近畿', lat:35.00718, lng:135.68154, youtubeId:'I4CxxDtXmr0' },
-  { id:'u0I7jwKO2cU', name:'嵐山・千光寺京都市西京区', pref:'京都府', city:'市西京区', region:'近畿', lat:35.01578, lng:135.6656, youtubeId:'u0I7jwKO2cU' },
-  { id:'eqxyc0Ix_Ic', name:'賀茂別雷神社', pref:'京都府', city:'京都市北区', region:'近畿', lat:35.06, lng:135.7527, youtubeId:'eqxyc0Ix_Ic' },
-  { id:'KjP8nl3IFqI', name:'京都京北 常照皇寺', pref:'京都府', city:'', region:'近畿', lat:35.20093, lng:135.68552, youtubeId:'KjP8nl3IFqI' },
-  { id:'itCkZ2xeINo', name:'京都京北 黒田百年桜とヤマザクラ', pref:'京都府', city:'', region:'近畿', lat:35.24255, lng:135.4546, youtubeId:'itCkZ2xeINo' },
-  { id:'LUjr4RIjX3k', name:'花の楽園「原谷苑', pref:'京都府', city:'京都市北区', region:'近畿', lat:35.048, lng:135.7268, youtubeId:'LUjr4RIjX3k' },
-  { id:'6WzcXx6r-Z8', name:'庁旧本館京都市上京区', pref:'京都府', city:'', region:'近畿', lat:35.02107, lng:135.75533, youtubeId:'6WzcXx6r-Z8' },
-  { id:'3D9A98iM42k', name:'長岡京市勝龍寺城', pref:'京都府', city:'', region:'近畿', lat:34.91823, lng:135.70078, youtubeId:'3D9A98iM42k' },
-  { id:'40l7RoqigO4', name:'京田辺市田辺木津川つつみ緑地', pref:'京都府', city:'', region:'近畿', lat:34.83111, lng:135.77152, youtubeId:'40l7RoqigO4' },
-  { id:'NGfEKMSTMi0', name:'南あわじ市 諭鶴羽ダム公園', pref:'兵庫県', city:'南あわじ市', region:'近畿', lat:34.24975, lng:134.79733, youtubeId:'NGfEKMSTMi0' },
-  { id:'2w1T2ejJUXA', name:'小野市おの桜つづみ回廊', pref:'兵庫県', city:'小野市', region:'近畿', lat:34.89772, lng:134.93129, youtubeId:'2w1T2ejJUXA' },
-  { id:'EXa-A-sdij4', name:'クマノザクラ和歌山古座川町潤野', pref:'和歌山県', city:'古座川町', region:'近畿', lat:33.52328, lng:135.82704, youtubeId:'EXa-A-sdij4' },
-  { id:'YP5V1NPHibo', name:'古座川町のクマノザクラ', pref:'和歌山県', city:'古座川町', region:'近畿', lat:33.51591, lng:135.83379, youtubeId:'YP5V1NPHibo' },
-  { id:'rICueshcaAk', name:'紀三井寺の桜', pref:'和歌山県', city:'', region:'近畿', lat:34.1845, lng:135.18944, youtubeId:'rICueshcaAk' },
-  { id:'Knjr3sgefEM', name:'100年ぶりの新種「クマノザクラ」古座川', pref:'和歌山県', city:'', region:'近畿', lat:34.23221, lng:135.19158, youtubeId:'Knjr3sgefEM' },
-  { id:'cp02-WrpL8s', name:'門真市パナソニックミュージアムさくら広場', pref:'大阪府', city:'門真市', region:'近畿', lat:34.7395, lng:135.58691, youtubeId:'cp02-WrpL8s' },
-  { id:'6_FrwYK1UkU', name:'日本三大山城高取城跡', pref:'奈良県', city:'高取町', region:'近畿', lat:34.45004, lng:135.79176, youtubeId:'6_FrwYK1UkU' },
-  { id:'dSa9J5mc9GY', name:'大野寺のしだれ桜', pref:'奈良県', city:'宇陀市', region:'近畿', lat:34.52822, lng:135.95269, youtubeId:'dSa9J5mc9GY' },
-  { id:'Yd3A3C_pe6A', name:'佛隆寺の千年桜', pref:'奈良県', city:'宇陀市', region:'近畿', lat:34.52085, lng:135.95944, youtubeId:'Yd3A3C_pe6A' },
-  { id:'WSztQc3iJPU', name:'壺阪寺の大仏桜', pref:'奈良県', city:'', region:'近畿', lat:34.29631, lng:135.88168, youtubeId:'WSztQc3iJPU' },
-  { id:'BytI3II_RB8', name:'吉野町の上千本・奥千本', pref:'奈良県', city:'吉野町', region:'近畿', lat:34.39598, lng:135.85751, youtubeId:'BytI3II_RB8' },
-  { id:'MtPkD8nTI-E', name:'三井寺大津市', pref:'滋賀県', city:'', region:'近畿', lat:35.01302, lng:135.85961, youtubeId:'MtPkD8nTI-E' },
-  { id:'orlDFUBya4U', name:'海津大崎と草津川跡地公園の桜', pref:'滋賀県', city:'', region:'近畿', lat:35.24715, lng:136.10939, youtubeId:'orlDFUBya4U' },
-  { id:'tabcdGFC-Kw', name:'下関市功山寺, 火の山公園', pref:'山口県', city:'下関市', region:'中国', lat:33.99239, lng:130.96655, youtubeId:'tabcdGFC-Kw' },
-  { id:'jeTY9qGyfUU', name:'山口市大原湖キャンプ場の桜', pref:'山口県', city:'山口市', region:'中国', lat:35.1993, lng:137.10224, youtubeId:'jeTY9qGyfUU' },
-  { id:'tVwkDNiRU9A', name:'たけべの森の桜', pref:'岡山県', city:'', region:'中国', lat:34.85813, lng:133.77593, youtubeId:'tVwkDNiRU9A' },
-  { id:'uq5xTv24z7s', name:'松江市松江城とソメイヨシノ', pref:'島根県', city:'松江市', region:'中国', lat:35.46811, lng:133.04877, youtubeId:'uq5xTv24z7s' },
-  { id:'N-9XvquJ3wE', name:'佐木島 塔ノ峰千本桜 ロング・ショット', pref:'広島県', city:'三原市', region:'中国', lat:34.39744, lng:133.0785, youtubeId:'N-9XvquJ3wE' },
-  { id:'0aq-4POv3wI', name:'呉市大平山展望台の桜', pref:'広島県', city:'呉市', region:'中国', lat:34.24845, lng:132.56525, youtubeId:'0aq-4POv3wI' },
-  { id:'kl_HC089y74', name:'三原市佐木島 塔ノ峰千本桜', pref:'広島県', city:'三原市', region:'中国', lat:34.39007, lng:133.08525, youtubeId:'kl_HC089y74' },
-  { id:'Xj2e3dGwI9g', name:'三原市佐木島の塔の峰千本桜', pref:'広島県', city:'三原市', region:'中国', lat:34.39866, lng:133.06455, youtubeId:'Xj2e3dGwI9g' },
-  { id:'7oIB17U030A', name:'鳥取城址の桜', pref:'鳥取県', city:'', region:'中国', lat:35.52905, lng:134.22946, youtubeId:'7oIB17U030A' },
-  { id:'rT-qTPfMvJo', name:'海部郡美波町薬王寺', pref:'徳島県', city:'', region:'四国', lat:33.7323, lng:134.52759, youtubeId:'rT-qTPfMvJo' },
-  { id:'qKW46cJerJ4', name:'岩城山積善山の桜', pref:'愛媛県', city:'', region:'四国', lat:33.60136, lng:132.81853, youtubeId:'qKW46cJerJ4' },
-  { id:'rsyVa0q7obY', name:'今治市 伯方島 開山公園', pref:'愛媛県', city:'今治市', region:'四国', lat:34.22883, lng:133.06568, youtubeId:'rsyVa0q7obY' },
-  { id:'n-vw7q7tP54', name:'宇和島城', pref:'愛媛県', city:'', region:'四国', lat:33.21982, lng:132.56473, youtubeId:'n-vw7q7tP54' },
-  { id:'2unA9ZkG3lc', name:'四国中央市霧の森', pref:'愛媛県', city:'', region:'四国', lat:33.92326, lng:133.6415, youtubeId:'2unA9ZkG3lc' },
-  { id:'XtRtGKpdzlE', name:'紫雲出山の桜', pref:'香川県', city:'三豊市', region:'四国', lat:34.23479, lng:133.63608, youtubeId:'XtRtGKpdzlE' },
-  { id:'zYmvabLwS5s', name:'高松市 女木島と男木島の桜', pref:'香川県', city:'高松市', region:'四国', lat:34.34256, lng:134.04653, youtubeId:'zYmvabLwS5s' },
-  { id:'jBudfCxyqto', name:'瀬戸内海の桜', pref:'香川県', city:'三豊市', region:'四国', lat:34.27, lng:133.68, youtubeId:'jBudfCxyqto' },
-  { id:'nWGfWjWWRWo', name:'三豊市紫雲出山の桜', pref:'香川県', city:'三豊市', region:'四国', lat:34.22742, lng:133.64283, youtubeId:'nWGfWjWWRWo' },
-  { id:'R2dbiQOO6sI', name:'仁淀川町仁淀ブルーとひょうたん桜', pref:'高知県', city:'仁淀川町', region:'四国', lat:33.5751, lng:133.16742, youtubeId:'R2dbiQOO6sI' },
-  { id:'km0C9VASrTA', name:'宿毛市荒瀬山の桜', pref:'高知県', city:'宿毛市', region:'四国', lat:32.93906, lng:132.72627, youtubeId:'km0C9VASrTA' },
-  { id:'hXY0Q4fmlFM', name:'仁淀ブルーと桜 仁淀川町', pref:'高知県', city:'仁淀川町', region:'四国', lat:33.56773, lng:133.17417, youtubeId:'hXY0Q4fmlFM' },
-  { id:'YHOhMzhzlFc', name:'嬉野市 納戸料の百年桜', pref:'佐賀県', city:'', region:'九州', lat:33.08674, lng:130.01813, youtubeId:'YHOhMzhzlFc' },
-  { id:'ok-Z-DlW1Zk', name:'多久市西渓公園', pref:'佐賀県', city:'', region:'九州', lat:33.25719, lng:130.08948, youtubeId:'ok-Z-DlW1Zk' },
-  { id:'XzaU-uZ8jr4', name:'城島高原パークの桜', pref:'大分県', city:'', region:'九州', lat:33.23832, lng:131.61247, youtubeId:'XzaU-uZ8jr4' },
-  { id:'RJPuKiI2zVk', name:'西都市西都原古墳群', pref:'宮崎県', city:'', region:'九州', lat:32.11518, lng:131.38947, youtubeId:'RJPuKiI2zVk' },
-  { id:'FEj7so8hhKE', name:'今帰仁城跡のカンヒザクラ', pref:'沖縄県', city:'', region:'九州', lat:26.57078, lng:128.02559, youtubeId:'FEj7so8hhKE' },
-  { id:'MUjYhuM7qn4', name:'市房ダム&人吉城', pref:'熊本県', city:'県市', region:'九州', lat:32.79151, lng:130.74779, youtubeId:'MUjYhuM7qn4' },
-  { id:'_tO_rZPCm7s', name:'みやま市平家の一本桜', pref:'福岡県', city:'みやま市', region:'九州', lat:33.15237, lng:130.47463, youtubeId:'_tO_rZPCm7s' },
-  { id:'m6G-V4WisOE', name:'北九州市若松高校のソメイヨシノ', pref:'福岡県', city:'北九州市', region:'九州', lat:33.8969, lng:130.70059, youtubeId:'m6G-V4WisOE' },
-  { id:'PJtBv70WNPE', name:'大村市大村公園の桜', pref:'長崎県', city:'大村', region:'九州', lat:32.92766, lng:129.93983, youtubeId:'PJtBv70WNPE' },
-  { id:'9RCipkCBrDc', name:'串良平和公園, 霧島神話の里公園, 丸岡公園', pref:'鹿児島県', city:'', region:'九州', lat:31.41687, lng:130.92968, youtubeId:'9RCipkCBrDc' },
-  { id:'sO4Y8s5jPR4', name:'桜島の桜', pref:'鹿児島県', city:'', region:'九州', lat:31.58935, lng:130.59887, youtubeId:'sO4Y8s5jPR4' },
+  {"id": "DH1ZchOIPCs", "name": "清隆寺のチシマザクラ", "pref": "北海道", "city": "根室市", "region": "hokkaido", "type": "chishima", "lat": 43.33015, "lng": 145.58339, "videos": [{"ytId": "DH1ZchOIPCs", "label": "本編", "title": "[SAKURA DRONE 4K] 清隆寺のチシマザクラ（Seiryuji's Chishima Cherry）北海道根室市｜桜ドローンプロジェクト2026"}]},
+  {"id": "-50Vpa-xC0c", "name": "野付の千島桜", "pref": "北海道", "city": "別海町", "region": "hokkaido", "type": "chishima", "lat": 43.39406, "lng": 145.11708, "videos": [{"ytId": "-50Vpa-xC0c", "label": "本編", "title": "[SAKURA DRONE 4K] 野付の千島桜（Notsuke's Chishima Cherry）北海道別海町｜桜ドローンプロジェクト2026"}]},
+  {"id": "Uk2EZjtp8_Y", "name": "はやしの桜", "pref": "北海道", "city": "別海町", "region": "hokkaido", "type": "someiyoshino", "lat": 43.38669, "lng": 145.12383, "videos": [{"ytId": "Uk2EZjtp8_Y", "label": "本編", "title": "[SAKURA DRONE 4K] はやしの桜（Hayashi's Sakura）北海道別海町｜桜ドローンプロジェクト2026"}]},
+  {"id": "8oQM6e3I0HU", "name": "国泰寺の老桜樹", "pref": "北海道", "city": "厚岸町", "region": "hokkaido", "type": "someiyoshino", "lat": 43.05182, "lng": 144.84769, "videos": [{"ytId": "8oQM6e3I0HU", "label": "本編", "title": "[SAKURA DRONE 4K] 国泰寺の老桜樹（Kokutai-ji's Rououju）北海道厚岸町｜桜ドローンプロジェクト2026"}]},
+  {"id": "VYwJMkMjGn0", "name": "松前城・松前公園の桜見本園", "pref": "北海道", "city": "", "region": "hokkaido", "type": "someiyoshino", "lat": 41.42936, "lng": 140.10787, "videos": [{"ytId": "VYwJMkMjGn0", "label": "本編", "title": "[桜ドローン撮影4K]北海道松前城・松前公園の桜見本園 Matsumae Park in Matsumae｜桜ドローンプロジェクト"}]},
+  {"id": "ZUVppAak2C4", "name": "筆甫のウバヒガン桜", "pref": "宮城県", "city": "丸森町", "region": "tohoku", "type": "edohigan", "lat": 37.91147, "lng": 140.7652, "videos": [{"ytId": "ZUVppAak2C4", "label": "本編", "title": "[SAKURA DRONE 4K] 筆甫のウバヒガン桜（Hippono Ubahigan）宮城県丸森町｜桜ドローンプロジェクト2026"}]},
+  {"id": "PnCTS8auk2o", "name": "白石市材木岩公園", "pref": "宮城県", "city": "白石市", "region": "tohoku", "type": "someiyoshino", "lat": 38.00237, "lng": 140.62002, "videos": [{"ytId": "PnCTS8auk2o", "label": "本編", "title": "[桜ドローン撮影4K] 宮城県白石市材木岩公園/西行戻しの松公園の桜｜桜ドローンプロジェクト"}]},
+  {"id": "zo6MU2i6ytI", "name": "竜神桜", "pref": "山形県", "city": "上山市", "region": "tohoku", "type": "someiyoshino", "lat": 38.21834, "lng": 140.33815, "videos": [{"ytId": "zo6MU2i6ytI", "label": "本編", "title": "[SAKURA DRONE 4K] 竜神桜（Ryujinzakura）山形県上山市｜桜ドローンプロジェクト2026"}]},
+  {"id": "cRkNfIZDs-M", "name": "伊佐沢の久保ザクラと草岡の大明神ザクラ", "pref": "山形県", "city": "長井市", "region": "tohoku", "type": "someiyoshino", "lat": 38.10636, "lng": 140.0339, "videos": [{"ytId": "cRkNfIZDs-M", "label": "本編", "title": "[SAKURA DRONE 4K] 伊佐沢の久保ザクラと草岡の大明神ザクラ（Isazawaand Kusaoka）山形県長井市｜桜ドローンプロジェクト2026"}]},
+  {"id": "lY53ca126J4", "name": "白鷹町 釜の越桜", "pref": "山形県", "city": "白鷹町", "region": "tohoku", "type": "someiyoshino", "lat": 38.18301, "lng": 140.09836, "videos": [{"ytId": "lY53ca126J4", "label": "本編", "title": "[桜ドローン撮影4K] 山形県白鷹町 釜の越桜 / Kamanokoshi sakura, Shirataka, Yamagata | 桜ドローンプロジェクト"}]},
+  {"id": "CFGgcFH-xAg", "name": "南陽市 烏帽子山公園, 双松公園", "pref": "山形県", "city": "南陽市", "region": "tohoku", "type": "someiyoshino", "lat": 38.05102, "lng": 140.16488, "videos": [{"ytId": "CFGgcFH-xAg", "label": "本編", "title": "[桜ドローン撮影4K]山形県南陽市 烏帽子山公園, 双松公園 / Eboshiyama Park, Nanyo, Yamagata | 桜ドローンプロジェクト"}]},
+  {"id": "QR7ct21dxFs", "name": "鶴岡市鶴岡公園", "pref": "山形県", "city": "", "region": "tohoku", "type": "someiyoshino", "lat": 38.72837, "lng": 139.82428, "videos": [{"ytId": "QR7ct21dxFs", "label": "本編", "title": "[桜ドローン撮影4K]山形県鶴岡市鶴岡公園 Tsuruoka Park in Tsuruoka｜桜ドローンプロジェクト"}]},
+  {"id": "5qMBYQOYCx8", "name": "龍谷寺のモリオカシダレ", "pref": "岩手県", "city": "盛岡市", "region": "tohoku", "type": "shidare", "lat": 39.71074, "lng": 141.15448, "videos": [{"ytId": "5qMBYQOYCx8", "label": "本編", "title": "[SAKURA DRONE 4K] 龍谷寺のモリオカシダレ（Ryukoku-ji Temple's Moriokashidare）岩手県盛岡市｜桜ドローンプロジェクト2026"}]},
+  {"id": "re3ArOkFFMo", "name": "高松公園, 福泉寺の桜", "pref": "岩手県", "city": "", "region": "tohoku", "type": "someiyoshino", "lat": 39.57138, "lng": 141.42536, "videos": [{"ytId": "re3ArOkFFMo", "label": "本編", "title": "[桜ドローン撮影4K]岩手県高松公園, 福泉寺の桜 Takamatsu Park & Fukusenji｜桜ドローンプロジェクト"}]},
+  {"id": "8P8pfy3lxt0", "name": "慈徳寺の種まき桜", "pref": "福島県", "city": "福島市", "region": "tohoku", "type": "someiyoshino", "lat": 37.76078, "lng": 140.47458, "videos": [{"ytId": "8P8pfy3lxt0", "label": "本編", "title": "[SAKURA DRONE 4K] 慈徳寺の種まき桜（Jitoku-ji Templeno Tanemakizakura）福島県福島市｜桜ドローンプロジェクト2026"}]},
+  {"id": "zOeC4tGXeNE", "name": "秋山の駒ザクラ", "pref": "福島県", "city": "川俣町", "region": "tohoku", "type": "someiyoshino", "lat": 37.66497, "lng": 140.59861, "videos": [{"ytId": "zOeC4tGXeNE", "label": "本編", "title": "[SAKURA DRONE 4K] 秋山の駒ザクラ（Akiyamano Komazakura）福島県川俣町｜桜ドローンプロジェクト2026"}]},
+  {"id": "R2kWYqR_-MI", "name": "中島の地蔵桜", "pref": "福島県", "city": "二本松市2", "region": "tohoku", "type": "someiyoshino", "lat": 37.58504, "lng": 140.43139, "videos": [{"ytId": "R2kWYqR_-MI", "label": "本編", "title": "[SAKURA DRONE 4K] 中島の地蔵桜（Nakajimano Jizo-zakura）福島県二本松市2｜桜ドローンプロジェクト2026"}]},
+  {"id": "JgKYW1_ZGRs", "name": "祭田のサクラ", "pref": "福島県", "city": "二本松市2", "region": "tohoku", "type": "someiyoshino", "lat": 37.57767, "lng": 140.43814, "videos": [{"ytId": "JgKYW1_ZGRs", "label": "本編", "title": "[SAKURA DRONE 4K] 祭田のサクラ（Matsuridano Sakura）福島県二本松市2｜桜ドローンプロジェクト2026"}]},
+  {"id": "3xrt6306SkI", "name": "日向の人待地蔵桜", "pref": "福島県", "city": "二本松市", "region": "tohoku", "type": "someiyoshino", "lat": 37.58626, "lng": 140.41744, "videos": [{"ytId": "3xrt6306SkI", "label": "本編", "title": "[SAKURA DRONE 4K] 日向の人待地蔵桜（Hinatano Hitomachi Jizo Sakura）福島県二本松市｜桜ドローンプロジェクト2026"}]},
+  {"id": "6QaOvCrPltc", "name": "弥明の桜", "pref": "福島県", "city": "郡山市", "region": "tohoku", "type": "someiyoshino", "lat": 37.40494, "lng": 140.33338, "videos": [{"ytId": "6QaOvCrPltc", "label": "本編", "title": "[SAKURA DRONE 4K] 弥明の桜（Mimyo No Sakura）福島県郡山市｜桜ドローンプロジェクト2026"}]},
+  {"id": "hHCo9UGxHS0", "name": "石部桜", "pref": "福島県", "city": "会津若松市", "region": "tohoku", "type": "someiyoshino", "lat": 37.51018, "lng": 139.95423, "videos": [{"ytId": "hHCo9UGxHS0", "label": "本編", "title": "[SAKURA DRONE 4K] 石部桜（Ishibe Zakura）福島県会津若松市｜桜ドローンプロジェクト2026"}]},
+  {"id": "rXO3zJhyyyQ", "name": "田村市の一本桜", "pref": "福島県", "city": "田村", "region": "tohoku", "type": "someiyoshino", "lat": 37.44719, "lng": 140.49291, "videos": [{"ytId": "rXO3zJhyyyQ", "label": "本編", "title": "[桜ドローン撮影4K] 福島県田村市の一本桜｜桜ドローンプロジェクト"}]},
+  {"id": "7buYOGi_m70", "name": "おしら様の枝垂れ桜", "pref": "秋田県", "city": "湯沢市", "region": "tohoku", "type": "shidare", "lat": 39.1643, "lng": 140.49575, "videos": [{"ytId": "7buYOGi_m70", "label": "本編", "title": "[SAKURA DRONE 4K] おしら様の枝垂れ桜（Oshira-sama's Shidarezakurariokashidare）秋田県湯沢市｜桜ドローンプロジェクト2026"}]},
+  {"id": "pp1VODhQz1k", "name": "横手市の真人公園", "pref": "秋田県", "city": "横手市", "region": "tohoku", "type": "someiyoshino", "lat": 39.31378, "lng": 140.56674, "videos": [{"ytId": "pp1VODhQz1k", "label": "本編", "title": "[桜ドローン撮影4K] 秋田県横手市の真人公園/横手公園/平安の風わたる公園/大森公園の桜 ｜桜ドローンプロジェクト"}]},
+  {"id": "FNl82_yIKns", "name": "野辺地町愛宕公園の桜", "pref": "青森県", "city": "野辺地町", "region": "tohoku", "type": "someiyoshino", "lat": 40.86449, "lng": 141.12818, "videos": [{"ytId": "FNl82_yIKns", "label": "本編", "title": "[桜ドローン撮影4K]青森県野辺地町愛宕公園の桜 Atago Park & Hayakakenuma Park｜桜ドローンプロジェクト"}]},
+  {"id": "N132SuBeLBU", "name": "八千代市新川千本さくら", "pref": "千葉県", "city": "八千代市", "region": "kanto", "type": "someiyoshino", "lat": 35.72254, "lng": 140.09951, "videos": [{"ytId": "N132SuBeLBU", "label": "本編", "title": "[桜ドローン撮影4K]  千葉県八千代市新川千本さくら（河津桜) ｜桜ドローンプロジェクト"}]},
+  {"id": "RlwFTn1VZO0", "name": "清雲寺のしだれ桜", "pref": "埼玉県", "city": "秩父市", "region": "kanto", "type": "shidare", "lat": 35.99145, "lng": 139.08576, "videos": [{"ytId": "RlwFTn1VZO0", "label": "本編", "title": "[SAKURA DRONE 4K] Seiun-ji Temple's Weeping Cherry Blossoms (Chichibu City, Saitama Prefecture) |..."}]},
+  {"id": "ZevXb0G_AXM", "name": "西光寺のしだれ桜", "pref": "埼玉県", "city": "飯能市", "region": "kanto", "type": "shidare", "lat": 35.85569, "lng": 139.32764, "videos": [{"ytId": "ZevXb0G_AXM", "label": "本編", "title": "[SAKURA DRONE 4K] 西光寺のしだれ桜（Saiko-ji's Shidarezakura）埼玉県飯能市｜桜ドローンプロジェクト2026"}]},
+  {"id": "zQil_cb_HSs", "name": "本庄市こだま千本桜", "pref": "埼玉県", "city": "本庄市", "region": "kanto", "type": "someiyoshino", "lat": 36.24359, "lng": 139.19163, "videos": [{"ytId": "zQil_cb_HSs", "label": "本編", "title": "[桜ドローン撮影4K]埼玉県本庄市こだま千本桜 / Kodama Senbon-zakura, Honjo, Saitama | 桜ドローンプロジェクト"}]},
+  {"id": "VO7CLJ1eeWA", "name": "久喜市のカワヅザクラ", "pref": "埼玉県", "city": "久喜市", "region": "kanto", "type": "someiyoshino", "lat": 36.0618, "lng": 139.66714, "videos": [{"ytId": "VO7CLJ1eeWA", "label": "本編", "title": "[桜ドローン撮影4K] 埼玉県久喜市のカワヅザクラ（河津桜)  ｜桜ドローンプロジェクト"}]},
+  {"id": "WMKbFnX1JQc", "name": "渋谷区 金王八幡宮の金王桜", "pref": "東京都", "city": "渋谷区", "region": "kanto", "type": "someiyoshino", "lat": 35.65752, "lng": 139.70639, "videos": [{"ytId": "WMKbFnX1JQc", "label": "本編", "title": "[SAKURA DRONE 4K] 東京都渋谷区 金王八幡宮の金王桜｜Sakura in Konno Hachimangu｜桜ドローンプロジェクト2023"}]},
+  {"id": "_G4zRNbdVLk", "name": "小金井市 名勝小金井櫻", "pref": "東京都", "city": "", "region": "kanto", "type": "someiyoshino", "lat": 35.7126, "lng": 139.50775, "videos": [{"ytId": "_G4zRNbdVLk", "label": "本編", "title": "[桜ドローン撮影4K] 東京都小金井市 名勝小金井櫻 / Meisho Koganei sakura, Koganei, Tokyo | 桜ドローンプロジェクト"}]},
+  {"id": "shIpFcNBk1s", "name": "小金井市浴恩館のソメイヨシノ", "pref": "東京都", "city": "小金井市", "region": "kanto", "type": "someiyoshino", "lat": 35.70411, "lng": 139.51068, "videos": [{"ytId": "shIpFcNBk1s", "label": "本編", "title": "[桜ドローン撮影4K] 東京都小金井市浴恩館のソメイヨシノ｜桜ドローンプロジェクト"}]},
+  {"id": "PMVyOxW3kwc", "name": "芳賀郡の花の山", "pref": "栃木県", "city": "芳賀郡", "region": "kanto", "type": "someiyoshino", "lat": 36.51024, "lng": 140.12686, "videos": [{"ytId": "PMVyOxW3kwc", "label": "本編", "title": "[桜ドローン撮影4K]栃木県芳賀郡の花の山 ｜桜ドローンプロジェクト"}]},
+  {"id": "-YBYDMVrDuA", "name": "長興山紹太寺のしだれ桜", "pref": "神奈川県", "city": "小田原市", "region": "kanto", "type": "shidare", "lat": 35.26453, "lng": 139.15225, "videos": [{"ytId": "-YBYDMVrDuA", "label": "本編", "title": "[SAKURA DRONE 4K] 長興山紹太寺のしだれ桜（Chokozan Shotai-ji's Shidarezakura）神奈川県小田原市｜桜ドローンプロジェクト2026"}]},
+  {"id": "LDB8qoSpMq4", "name": "白泉寺", "pref": "神奈川県", "city": "秦野市", "region": "kanto", "type": "someiyoshino", "lat": 35.40696, "lng": 139.17677, "videos": [{"ytId": "LDB8qoSpMq4", "label": "本編", "title": "[SAKURA DRONE 4K] 白泉寺（Hakusen-ji Temple）神奈川県秦野市｜桜ドローンプロジェクト2026"}]},
+  {"id": "LHW-19iFk1I", "name": "鎌倉市源氏山公園・銭洗弁財天の桜", "pref": "神奈川県", "city": "鎌倉市", "region": "kanto", "type": "someiyoshino", "lat": 35.31928, "lng": 139.54696, "videos": [{"ytId": "LHW-19iFk1I", "label": "本編", "title": "[桜ドローン撮影4K] 神奈川県鎌倉市源氏山公園・銭洗弁財天の桜｜桜ドローンプロジェクト"}]},
+  {"id": "YPukaNK5bfk", "name": "相模原市さがみ湖リゾートプレジャーフォレスト", "pref": "神奈川県", "city": "", "region": "kanto", "type": "someiyoshino", "lat": 35.6054, "lng": 139.20756, "videos": [{"ytId": "YPukaNK5bfk", "label": "本編", "title": "[桜ドローン撮影4K] 神奈川県相模原市さがみ湖リゾートプレジャーフォレスト| 桜ドローンプロジェクト"}]},
+  {"id": "SB2rZzv_j18", "name": "妙義神社の桜", "pref": "群馬県", "city": "", "region": "kanto", "type": "someiyoshino", "lat": 36.52198, "lng": 139.03348, "videos": [{"ytId": "SB2rZzv_j18", "label": "本編", "title": "[桜ドローン撮影4K] 群馬県妙義神社の桜｜桜ドローンプロジェクト"}]},
+  {"id": "ZwoKIPOyt7U", "name": "結城市 桜見本園", "pref": "茨城県", "city": "結城市", "region": "kanto", "type": "someiyoshino", "lat": 36.30529, "lng": 139.87714, "videos": [{"ytId": "ZwoKIPOyt7U", "label": "本編", "title": "[桜ドローン撮影4K]茨城県 結城市 桜見本園 Sakuramihonen in Yuki｜桜ドローンプロジェクト"}]},
+  {"id": "Uu9n_ySfrr0", "name": "結城農場の桜", "pref": "茨城県", "city": "", "region": "kanto", "type": "someiyoshino", "lat": 35.89089, "lng": 140.06875, "videos": [{"ytId": "Uu9n_ySfrr0", "label": "本編", "title": "[桜ドローン撮影4K]茨城県結城農場の桜｜桜ドローンプロジェクト"}]},
+  {"id": "g4eKQmaukEs", "name": "朝日町の春の四重奏", "pref": "富山県", "city": "朝日町", "region": "chubu", "type": "someiyoshino", "lat": 36.94361, "lng": 137.55706, "videos": [{"ytId": "g4eKQmaukEs", "label": "Short Ver", "title": "[桜ドローン撮影4K]富山県朝日町の春の四重奏 Short Version｜桜ドローンプロジェクト"}, {"ytId": "sVrb4xvofaE", "label": "Long Ver", "title": "[桜ドローン撮影4K]富山県朝日町の春の四重奏 10in Long Version｜桜ドローンプロジェクト"}, {"ytId": "sHMDuoAYipA", "label": "2020", "title": "[桜ドローン撮影4K]富山県朝日町の春の四重奏｜桜ドローンプロジェクト2020"}]},
+  {"id": "FAZiZNxiK6c", "name": "本郷の千年桜", "pref": "山梨県", "city": "南部町", "region": "chubu", "type": "someiyoshino", "lat": 35.24234, "lng": 138.48592, "videos": [{"ytId": "FAZiZNxiK6c", "label": "本編", "title": "[SAKURA DRONE 4K] 本郷の千年桜（Hongono Sennenzakura）山梨県南部町｜桜ドローンプロジェクト2026"}]},
+  {"id": "DAnTFL6Qm7c", "name": "原間のイトザクラ", "pref": "山梨県", "city": "南部町", "region": "chubu", "type": "shidare", "lat": 35.23497, "lng": 138.49267, "videos": [{"ytId": "DAnTFL6Qm7c", "label": "本編", "title": "[SAKURA DRONE 4K] Haramano Itozakura (Weeping Cherry Blossom) in Nanbu Town, Yamanashi Prefecture..."}]},
+  {"id": "bxTZMbYZALg", "name": "内船寺", "pref": "山梨県", "city": "南部町", "region": "chubu", "type": "someiyoshino", "lat": 35.24356, "lng": 138.47197, "videos": [{"ytId": "bxTZMbYZALg", "label": "本編", "title": "[SAKURA DRONE 4K] 内船寺（Naisen-ji Temple）山梨県南部町｜桜ドローンプロジェクト2026"}]},
+  {"id": "QFm_jOdTucA", "name": "甲斐善光寺", "pref": "山梨県", "city": "甲府市", "region": "chubu", "type": "someiyoshino", "lat": 35.66593, "lng": 138.59289, "videos": [{"ytId": "QFm_jOdTucA", "label": "本編", "title": "[SAKURA DRONE 4K] 甲斐善光寺（Kai Zenkoji Temple）山梨県甲府市｜桜ドローンプロジェクト2026"}]},
+  {"id": "qAg5zoMVxn0", "name": "乙ヶ妻のシダレザクラ", "pref": "山梨県", "city": "山梨市", "region": "chubu", "type": "shidare", "lat": 35.69285, "lng": 138.68713, "videos": [{"ytId": "qAg5zoMVxn0", "label": "本編", "title": "[SAKURA DRONE 4K] 乙ヶ妻のシダレザクラ（Okkazuma Shidarezakura）山梨県山梨市｜桜ドローンプロジェクト2026"}]},
+  {"id": "YlP8U8vZG2E", "name": "山高神代桜北杜市實相寺", "pref": "山梨県", "city": "北杜市", "region": "chubu", "type": "someiyoshino", "lat": 35.77648, "lng": 138.42357, "videos": [{"ytId": "YlP8U8vZG2E", "label": "本編", "title": "[SAKURA DRONE 4K] 山高神代桜（Yamataka Jindaizakura）山梨県北杜市實相寺｜桜ドローンプロジェクト2026"}]},
+  {"id": "YPVjjIMrpVo", "name": "西湖いやしの里根場", "pref": "山梨県", "city": "富士河口湖町", "region": "chubu", "type": "someiyoshino", "lat": 35.4983, "lng": 138.6856, "videos": [{"ytId": "YPVjjIMrpVo", "label": "本編", "title": "[SAKURA DRONE 4K] 西湖いやしの里根場｜Saiko Iyashinosato Nenba｜桜ドローンプロジェクト"}]},
+  {"id": "51CUKa8M03E", "name": "忍草山大日院東圓寺", "pref": "山梨県", "city": "忍野村", "region": "chubu", "type": "someiyoshino", "lat": 35.4592, "lng": 138.8389, "videos": [{"ytId": "51CUKa8M03E", "label": "本編", "title": "[SAKURA DRONE 4K] 忍草山大日院東圓寺｜Touenji Temple｜桜ドローンプロジェクト"}]},
+  {"id": "ZPfGp1S95GU", "name": "富士本栖湖リゾートの芝桜", "pref": "山梨県", "city": "", "region": "chubu", "type": "someiyoshino", "lat": 35.63993, "lng": 138.63805, "videos": [{"ytId": "ZPfGp1S95GU", "label": "本編", "title": "[桜ドローン撮影4K] 山梨県富士本栖湖リゾートの芝桜｜桜ドローンプロジェクト"}]},
+  {"id": "kfuH9y09xlk", "name": "身延山久遠寺の枝垂れ桜", "pref": "山梨県", "city": "", "region": "chubu", "type": "shidare", "lat": 35.37167, "lng": 138.43723, "videos": [{"ytId": "kfuH9y09xlk", "label": "本編", "title": "[桜ドローン撮影4K] 山梨県身延山久遠寺の枝垂れ桜｜桜ドローンプロジェクト"}]},
+  {"id": "84AWc1GRfzU", "name": "日本三大桜 淡墨桜本巣市", "pref": "岐阜県", "city": "本巣市", "region": "chubu", "type": "someiyoshino", "lat": 35.48303, "lng": 136.67806, "videos": [{"ytId": "84AWc1GRfzU", "label": "本編", "title": "[桜ドローン撮影4K] 日本三大桜 淡墨桜（うすずみざくら）岐阜県本巣市｜桜ドローンプロジェクト"}]},
+  {"id": "EJsB_YKlqh4", "name": "西尾市黄金堤の桜", "pref": "愛知県", "city": "西尾市", "region": "chubu", "type": "someiyoshino", "lat": 34.8225, "lng": 137.06963, "videos": [{"ytId": "EJsB_YKlqh4", "label": "本編", "title": "[桜ドローン撮影4K] 愛知県西尾市黄金堤の桜｜桜ドローンプロジェクト"}]},
+  {"id": "GFmBTIcUK6A", "name": "吉川三大しだれ桜", "pref": "新潟県", "city": "上越市", "region": "chubu", "type": "shidare", "lat": 37.14788, "lng": 138.23595, "videos": [{"ytId": "GFmBTIcUK6A", "label": "本編", "title": "[SAKURA DRONE 4K] 吉川三大しだれ桜（村屋）（Murayano Shidarezakura）新潟県上越市｜桜ドローンプロジェクト2026"}]},
+  {"id": "Cocp6-OLhdM", "name": "妙高市経塚山公園の桜", "pref": "新潟県", "city": "妙高市", "region": "chubu", "type": "someiyoshino", "lat": 37.02525, "lng": 138.25364, "videos": [{"ytId": "Cocp6-OLhdM", "label": "本編", "title": "[桜ドローン撮影4K]新潟県妙高市経塚山公園の桜 ｜桜ドローンプロジェクト"}]},
+  {"id": "wxOMMFTSxRo", "name": "能登鹿島駅", "pref": "石川県", "city": "", "region": "chubu", "type": "someiyoshino", "lat": 37.18022, "lng": 136.89825, "videos": [{"ytId": "wxOMMFTSxRo", "label": "本編", "title": "[桜ドローン撮影4K]石川県能登鹿島（能登さくら）駅｜桜ドローンプロジェクト"}]},
+  {"id": "pBZBzfDcE40", "name": "福井市 足羽川桜並木", "pref": "福井県", "city": "福井市", "region": "chubu", "type": "someiyoshino", "lat": 36.06175, "lng": 136.22605, "videos": [{"ytId": "pBZBzfDcE40", "label": "本編", "title": "[桜ドローン撮影4K] 福井県福井市 足羽川桜並木｜桜ドローンプロジェクト"}]},
+  {"id": "8Ch0WMzezdo", "name": "宇木の千歳桜と区民会館前のしだれ桜", "pref": "長野県", "city": "山ノ内町", "region": "chubu", "type": "shidare", "lat": 36.74459, "lng": 138.41266, "videos": [{"ytId": "8Ch0WMzezdo", "label": "本編", "title": "[SAKURA DRONE 4K] 宇木の千歳桜と区民会館前のしだれ桜（Uki No Chitosezakura）長野県山ノ内町｜桜ドローンプロジェクト2026"}]},
+  {"id": "zrz0GREzJHc", "name": "青木村 大宝寺", "pref": "長野県", "city": "", "region": "chubu", "type": "someiyoshino", "lat": 34.82548, "lng": 137.5571, "videos": [{"ytId": "zrz0GREzJHc", "label": "本編", "title": "[桜ドローン撮影4K]長野県青木村 大宝寺 / Taiho-ji, Aoki, Nagano | 桜ドローンプロジェクト2022"}]},
+  {"id": "QjOnpOdlHr0", "name": "伊那市高遠城址公園のタカトオコヒガンザクラ", "pref": "長野県", "city": "伊那市", "region": "chubu", "type": "edohigan", "lat": 35.83045, "lng": 137.95492, "videos": [{"ytId": "QjOnpOdlHr0", "label": "本編", "title": "[桜ドローン撮影4K]長野県伊那市高遠城址公園のタカトオコヒガンザクラ｜桜ドローンプロジェクト"}]},
+  {"id": "z5ZUdfy89-s", "name": "潤井川龍巌淵", "pref": "静岡県", "city": "富士市", "region": "chubu", "type": "someiyoshino", "lat": 35.15816, "lng": 138.67977, "videos": [{"ytId": "z5ZUdfy89-s", "label": "メイン", "title": "[SAKURA DRONE 4K] 潤井川龍巌淵｜Ryuganbuchi with Sakura｜桜ドローンプロジェクト"}, {"ytId": "g9k4X8C3wKk", "label": "別アングル", "title": "[桜ドローン撮影4K]静岡県富士市潤井川/龍厳淵の桜｜桜ドローンプロジェクト"}]},
+  {"id": "mNStuxe0g6s", "name": "新橋浅間神社と桜", "pref": "静岡県", "city": "御殿場市", "region": "chubu", "type": "someiyoshino", "lat": 35.3088, "lng": 138.9356, "videos": [{"ytId": "mNStuxe0g6s", "label": "本編", "title": "[SAKURA DRONE 4K] 新橋浅間神社と桜｜Shimbashi Sengen Shrine with Sakura｜桜ドローンプロジェクト"}]},
+  {"id": "-YMqXFKGDyU", "name": "時之栖 御殿場市", "pref": "静岡県", "city": "", "region": "chubu", "type": "someiyoshino", "lat": 35.23497, "lng": 138.92539, "videos": [{"ytId": "-YMqXFKGDyU", "label": "本編", "title": "[SAKURA DRONE 4K] 時之栖（Tokinosumika） 静岡県御殿場市｜桜ドローンプロジェクト 2024"}]},
+  {"id": "H45JYJt0vtk", "name": "秩父宮記念公園御殿場市", "pref": "静岡県", "city": "", "region": "chubu", "type": "someiyoshino", "lat": 34.93325, "lng": 138.09554, "videos": [{"ytId": "H45JYJt0vtk", "label": "本編", "title": "[SAKURA DRONE 4K] ｜秩父宮記念公園（Chichibunomiya Memorial Park）静岡県御殿場市｜桜ドローンプロジェクト2024"}]},
+  {"id": "V1DfwlWsg-g", "name": "富士宮市 稲瀬川の桜", "pref": "静岡県", "city": "富士宮市", "region": "chubu", "type": "someiyoshino", "lat": 35.22373, "lng": 138.60891, "videos": [{"ytId": "V1DfwlWsg-g", "label": "本編", "title": "[桜ドローン撮影4K] 静岡県富士宮市 稲瀬川の桜｜桜ドローンプロジェクト"}]},
+  {"id": "mEnWmC-4VQE", "name": "御殿場市秩父宮記念公園のヤエベニシダレ", "pref": "静岡県", "city": "御殿場市", "region": "chubu", "type": "yaezakura", "lat": 35.3036, "lng": 138.9344, "videos": [{"ytId": "mEnWmC-4VQE", "label": "本編", "title": "[桜ドローン撮影4K]  御殿場市秩父宮記念公園のヤエベニシダレ（八重紅枝垂)｜桜ドローンプロジェクト"}]},
+  {"id": "RBWss0hRxwA", "name": "河津町のカワヅザクラ", "pref": "静岡県", "city": "河津町", "region": "chubu", "type": "someiyoshino", "lat": 34.74705, "lng": 138.99243, "videos": [{"ytId": "RBWss0hRxwA", "label": "本編", "title": "[桜ドローン撮影4K]  静岡県河津町のカワヅザクラ（河津桜) ｜桜ドローンプロジェクト"}]},
+  {"id": "RPQaFkOyuwU", "name": "御浜町のクマノザクラ", "pref": "三重県", "city": "御浜町", "region": "kinki", "type": "kumanozakura", "lat": 33.83157, "lng": 136.05499, "videos": [{"ytId": "RPQaFkOyuwU", "label": "本編", "title": "[桜ドローン撮影4K] 三重県御浜町のクマノザクラ｜桜ドローンプロジェクト"}]},
+  {"id": "1Yd2Rhqbqhw", "name": "正寿院綴喜郡宇治田原町", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 34.94129, "lng": 135.64882, "videos": [{"ytId": "1Yd2Rhqbqhw", "label": "本編", "title": "[SAKURA DRONE 4K] 正寿院（風鈴寺 / Shōju-in Temple）京都府綴喜郡宇治田原町｜桜ドローンプロジェクト"}]},
+  {"id": "tWK_D3Nl3VU", "name": "保津川下り亀岡市〜京都市嵐山", "pref": "京都府", "city": "府亀岡市", "region": "kinki", "type": "someiyoshino", "lat": 35.00633, "lng": 135.54933, "videos": [{"ytId": "tWK_D3Nl3VU", "label": "本編", "title": "[SAKURA DRONE 4K] 保津川下り（Hozugawa River Boat Ride）京都府亀岡市〜京都市嵐山｜桜ドローンプロジェクト"}]},
+  {"id": "pgsro8u9jZ0", "name": "龍安寺京都市右京区", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 35.03346, "lng": 135.71809, "videos": [{"ytId": "pgsro8u9jZ0", "label": "本編", "title": "[SAKURA DRONE 4K] 龍安寺（Ryoan-ji Temple）京都市右京区｜桜ドローンプロジェクト"}]},
+  {"id": "xUjdF92M79k", "name": "国立京都国際会館京都市左京区", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 35.06108, "lng": 135.78315, "videos": [{"ytId": "xUjdF92M79k", "label": "本編", "title": "[SAKURA DRONE 4K] 国立京都国際会館（Kyoto International Conference Center）京都市左京区｜桜ドローンプロジェクト"}]},
+  {"id": "Bxl2t9MWQ0s", "name": "和束町 茶畑の一本桜と祝橋の桜並木相楽郡", "pref": "京都府", "city": "府相楽郡", "region": "kinki", "type": "someiyoshino", "lat": 34.7735, "lng": 135.76058, "videos": [{"ytId": "Bxl2t9MWQ0s", "label": "本編", "title": "[SAKURA DRONE 4K] 和束町 茶畑の一本桜と祝橋の桜並木（Wazuka Town Tea Fields and Iwai-bashi Bridge）京都府相楽郡｜桜ドローンプロジェクト"}]},
+  {"id": "LuJpWsxIrG8", "name": "花宝苑京都市右京区京北", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 35.15518, "lng": 135.6334, "videos": [{"ytId": "LuJpWsxIrG8", "label": "本編", "title": "[SAKURA DRONE 4K] 花宝苑（Kahōen Garden, Hōsen-ji Temple）京都市右京区京北｜桜ドローンプロジェクト"}]},
+  {"id": "aiNEf7fs5OU", "name": "二尊院京都市右京区嵯峨野", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 35.01455, "lng": 135.67479, "videos": [{"ytId": "aiNEf7fs5OU", "label": "本編", "title": "[SAKURA DRONE 4K] 二尊院（Nison-in Temple）京都市右京区嵯峨野｜桜ドローンプロジェクト"}]},
+  {"id": "I4CxxDtXmr0", "name": "常寂光寺京都市右京区嵯峨野", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 35.00718, "lng": 135.68154, "videos": [{"ytId": "I4CxxDtXmr0", "label": "本編", "title": "[SAKURA DRONE 4K] 常寂光寺（Jojakko-ji Temple）京都市右京区嵯峨野｜桜ドローンプロジェクト"}]},
+  {"id": "u0I7jwKO2cU", "name": "嵐山・千光寺京都市西京区", "pref": "京都府", "city": "市西京区", "region": "kinki", "type": "someiyoshino", "lat": 35.01578, "lng": 135.6656, "videos": [{"ytId": "u0I7jwKO2cU", "label": "本編", "title": "[SAKURA DRONE 4K] 嵐山・千光寺（Senkō-ji Temple）京都市西京区｜桜ドローンプロジェクト"}]},
+  {"id": "eqxyc0Ix_Ic", "name": "賀茂別雷神社", "pref": "京都府", "city": "京都市北区", "region": "kinki", "type": "someiyoshino", "lat": 35.06, "lng": 135.7527, "videos": [{"ytId": "eqxyc0Ix_Ic", "label": "本編", "title": "[SAKURA DRONE 4K] 賀茂別雷神社（上賀茂神社 / Kamigamo Jinja）｜桜ドローンプロジェクト"}]},
+  {"id": "KjP8nl3IFqI", "name": "京都京北 常照皇寺", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 35.20093, "lng": 135.68552, "videos": [{"ytId": "KjP8nl3IFqI", "label": "本編", "title": "[SAKURA DRONE 4K] 京都京北 常照皇寺（Jōshōkō-ji Temple）｜桜ドローンプロジェクト"}]},
+  {"id": "itCkZ2xeINo", "name": "京都京北 黒田百年桜とヤマザクラ", "pref": "京都府", "city": "", "region": "kinki", "type": "yamazakura", "lat": 35.24255, "lng": 135.4546, "videos": [{"ytId": "itCkZ2xeINo", "label": "本編", "title": "[SAKURA DRONE 4K] 京都京北 黒田百年桜とヤマザクラ / Kuroda's 100-year cherry tree in Keihoku, Kyoto｜桜ドローンプロジェクト"}]},
+  {"id": "LUjr4RIjX3k", "name": "花の楽園「原谷苑", "pref": "京都府", "city": "京都市北区", "region": "kinki", "type": "someiyoshino", "lat": 35.048, "lng": 135.7268, "videos": [{"ytId": "LUjr4RIjX3k", "label": "本編", "title": "[SAKURA DRONE 4K] 花の楽園「原谷苑 / Haradanien」｜桜ドローンプロジェクト"}]},
+  {"id": "6WzcXx6r-Z8", "name": "庁旧本館京都市上京区", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 35.02107, "lng": 135.75533, "videos": [{"ytId": "6WzcXx6r-Z8", "label": "本編", "title": "[SAKURA DRONE 4K] 京都府庁旧本館（Former Main Building of the Kyoto Prefectural Office）京都市上京区｜桜ドローンプロジェクト"}]},
+  {"id": "3D9A98iM42k", "name": "長岡京市勝龍寺城", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 34.91823, "lng": 135.70078, "videos": [{"ytId": "3D9A98iM42k", "label": "本編", "title": "[桜ドローン撮影4K]  京都府長岡京市勝龍寺城｜桜ドローンプロジェクト"}]},
+  {"id": "40l7RoqigO4", "name": "京田辺市田辺木津川つつみ緑地", "pref": "京都府", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 34.83111, "lng": 135.77152, "videos": [{"ytId": "40l7RoqigO4", "label": "本編", "title": "[桜ドローン撮影4K] 京都府京田辺市田辺木津川つつみ緑地｜桜ドローンプロジェクト"}]},
+  {"id": "NGfEKMSTMi0", "name": "南あわじ市 諭鶴羽ダム公園", "pref": "兵庫県", "city": "南あわじ市", "region": "kinki", "type": "someiyoshino", "lat": 34.24975, "lng": 134.79733, "videos": [{"ytId": "NGfEKMSTMi0", "label": "本編", "title": "[桜ドローン撮影4K] 兵庫県南あわじ市 諭鶴羽ダム公園 / Yuduruha Dam, Minamiawaji, Hyogo | 桜ドローンプロジェクト"}]},
+  {"id": "2w1T2ejJUXA", "name": "小野市おの桜つづみ回廊", "pref": "兵庫県", "city": "小野市", "region": "kinki", "type": "someiyoshino", "lat": 34.89772, "lng": 134.93129, "videos": [{"ytId": "2w1T2ejJUXA", "label": "本編", "title": "[桜ドローン撮影4K] 兵庫県小野市おの桜つづみ回廊｜桜ドローンプロジェクト"}]},
+  {"id": "EXa-A-sdij4", "name": "クマノザクラ和歌山古座川町潤野", "pref": "和歌山県", "city": "古座川町", "region": "kinki", "type": "kumanozakura", "lat": 33.75713, "lng": 135.61747, "videos": [{"ytId": "EXa-A-sdij4", "label": "2026 潤野", "title": "[SAKURA DRONE 4K] クマノザクラ（Kumanozakura）和歌山古座川町潤野｜桜ドローンプロジェクト2026"}, {"ytId": "YP5V1NPHibo", "label": "2023", "title": "[SAKURA DRONE 4K] 和歌山県古座川町のクマノザクラ｜Kumanozakura in Kozakawa｜桜ドローンプロジェクト2023"}, {"ytId": "Knjr3sgefEM", "label": "新種発見", "title": "[桜ドローン撮影4K] 100年ぶりの新種「クマノザクラ」和歌山県古座川｜桜ドローンプロジェクト"}]},
+  {"id": "rICueshcaAk", "name": "紀三井寺の桜", "pref": "和歌山県", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 34.1845, "lng": 135.18944, "videos": [{"ytId": "rICueshcaAk", "label": "本編", "title": "[桜ドローン撮影4K] 和歌山県紀三井寺の桜 Kimiidera Temple, Wakayama (Long Ver. )｜桜ドローンプロジェクト"}]},
+  {"id": "cp02-WrpL8s", "name": "門真市パナソニックミュージアムさくら広場", "pref": "大阪府", "city": "門真市", "region": "kinki", "type": "someiyoshino", "lat": 34.7395, "lng": 135.58691, "videos": [{"ytId": "cp02-WrpL8s", "label": "本編", "title": "[桜ドローン撮影4K]大阪府門真市パナソニックミュージアムさくら広場｜桜ドローンプロジェクト"}]},
+  {"id": "6_FrwYK1UkU", "name": "日本三大山城高取城跡", "pref": "奈良県", "city": "高取町", "region": "kinki", "type": "someiyoshino", "lat": 34.45004, "lng": 135.79176, "videos": [{"ytId": "6_FrwYK1UkU", "label": "本編", "title": "[SAKURA DRONE 4K] 日本三大山城高取城跡（Takatori Mountain Castle）奈良県高取町｜桜ドローンプロジェクト2026"}]},
+  {"id": "dSa9J5mc9GY", "name": "大野寺のしだれ桜", "pref": "奈良県", "city": "宇陀市", "region": "kinki", "type": "shidare", "lat": 34.52822, "lng": 135.95269, "videos": [{"ytId": "dSa9J5mc9GY", "label": "本編", "title": "[SAKURA DRONE 4K] 大野寺のしだれ桜（Ono-ji Temple）奈良県宇陀市｜桜ドローンプロジェクト2026"}]},
+  {"id": "Yd3A3C_pe6A", "name": "佛隆寺の千年桜", "pref": "奈良県", "city": "宇陀市", "region": "kinki", "type": "someiyoshino", "lat": 34.52085, "lng": 135.95944, "videos": [{"ytId": "Yd3A3C_pe6A", "label": "本編", "title": "[SAKURA DRONE 4K] 佛隆寺の千年桜（Butsuryu-ji Temple）奈良県宇陀市｜桜ドローンプロジェクト2026"}]},
+  {"id": "WSztQc3iJPU", "name": "壺阪寺の大仏桜", "pref": "奈良県", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 34.29631, "lng": 135.88168, "videos": [{"ytId": "WSztQc3iJPU", "label": "本編", "title": "[桜ドローン撮影4K] 奈良県壺阪寺の大仏桜 Tsubosaka-dera Temple, Nara (Long Ver. )｜桜ドローンプロジェクト"}]},
+  {"id": "BytI3II_RB8", "name": "吉野町の上千本・奥千本", "pref": "奈良県", "city": "吉野町", "region": "kinki", "type": "someiyoshino", "lat": 34.39598, "lng": 135.85751, "videos": [{"ytId": "BytI3II_RB8", "label": "本編", "title": "[桜ドローン撮影4K]奈良県吉野町の上千本・奥千本 ｜桜ドローンプロジェクト"}]},
+  {"id": "MtPkD8nTI-E", "name": "三井寺大津市", "pref": "滋賀県", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 35.01302, "lng": 135.85961, "videos": [{"ytId": "MtPkD8nTI-E", "label": "本編", "title": "[SAKURA DRONE 4K] 三井寺（Miidera Temple, Onjo-ji）滋賀県大津市｜桜ドローンプロジェクト"}]},
+  {"id": "orlDFUBya4U", "name": "海津大崎と草津川跡地公園の桜", "pref": "滋賀県", "city": "", "region": "kinki", "type": "someiyoshino", "lat": 35.24715, "lng": 136.10939, "videos": [{"ytId": "orlDFUBya4U", "label": "本編", "title": "[桜ドローン撮影4K]滋賀県海津大崎と草津川跡地公園の桜｜桜ドローンプロジェクト"}]},
+  {"id": "tabcdGFC-Kw", "name": "下関市功山寺, 火の山公園", "pref": "山口県", "city": "下関市", "region": "chugoku", "type": "someiyoshino", "lat": 33.99239, "lng": 130.96655, "videos": [{"ytId": "tabcdGFC-Kw", "label": "本編", "title": "[桜ドローン撮影4K]山口県下関市功山寺, 火の山公園 / Kozan-ji & Hinoyama Park, Shimonoseki, Yamaguchi | 桜ドローンプロジェクト"}]},
+  {"id": "jeTY9qGyfUU", "name": "山口市大原湖キャンプ場の桜", "pref": "山口県", "city": "山口市", "region": "chugoku", "type": "someiyoshino", "lat": 35.1993, "lng": 137.10224, "videos": [{"ytId": "jeTY9qGyfUU", "label": "本編", "title": "[桜ドローン撮影4K] 山口県山口市大原湖キャンプ場の桜｜桜ドローンプロジェクト"}]},
+  {"id": "tVwkDNiRU9A", "name": "たけべの森の桜", "pref": "岡山県", "city": "", "region": "chugoku", "type": "someiyoshino", "lat": 34.85813, "lng": 133.77593, "videos": [{"ytId": "tVwkDNiRU9A", "label": "本編", "title": "[桜ドローン撮影4K] 岡山県たけべの森の桜｜桜ドローンプロジェクト"}]},
+  {"id": "uq5xTv24z7s", "name": "松江市松江城とソメイヨシノ", "pref": "島根県", "city": "松江市", "region": "chugoku", "type": "someiyoshino", "lat": 35.46811, "lng": 133.04877, "videos": [{"ytId": "uq5xTv24z7s", "label": "本編", "title": "[桜ドローン撮影4K] 島根県松江市松江城とソメイヨシノ｜桜ドローンプロジェクト"}]},
+  {"id": "N-9XvquJ3wE", "name": "佐木島 塔ノ峰千本桜 ロング・ショット", "pref": "広島県", "city": "三原市", "region": "chugoku", "type": "someiyoshino", "lat": 34.39539, "lng": 133.0761, "videos": [{"ytId": "N-9XvquJ3wE", "label": "ロングショット", "title": "[SAKURA DRONE 4K] 佐木島 塔ノ峰千本桜 ロング・ショット | 桜ドローンプロジェクト"}, {"ytId": "kl_HC089y74", "label": "2023", "title": "[SAKURA DRONE 4K] 広島県三原市佐木島 塔ノ峰千本桜｜Sakura in Sagishima｜桜ドローンプロジェクト2023 in 瀬戸内海"}, {"ytId": "Xj2e3dGwI9g", "label": "別ver", "title": "[桜ドローン撮影4K] 広島県三原市佐木島の塔の峰千本桜｜桜ドローンプロジェクト"}]},
+  {"id": "0aq-4POv3wI", "name": "呉市大平山展望台の桜", "pref": "広島県", "city": "呉市", "region": "chugoku", "type": "someiyoshino", "lat": 34.24845, "lng": 132.56525, "videos": [{"ytId": "0aq-4POv3wI", "label": "本編", "title": "[SAKURA DRONE 4K] 広島県呉市大平山展望台の桜｜Sakura in Ohirayama Park｜桜ドローンプロジェクト2023 in 瀬戸内海"}]},
+  {"id": "7oIB17U030A", "name": "鳥取城址の桜", "pref": "鳥取県", "city": "", "region": "chugoku", "type": "someiyoshino", "lat": 35.52905, "lng": 134.22946, "videos": [{"ytId": "7oIB17U030A", "label": "本編", "title": "[桜ドローン撮影4K] 鳥取県鳥取城址（久松公園）の桜｜桜ドローンプロジェクト"}]},
+  {"id": "rT-qTPfMvJo", "name": "海部郡美波町薬王寺", "pref": "徳島県", "city": "", "region": "shikoku", "type": "someiyoshino", "lat": 33.7323, "lng": 134.52759, "videos": [{"ytId": "rT-qTPfMvJo", "label": "本編", "title": "[桜ドローン撮影4K] 徳島県徳島県海部郡美波町薬王寺｜桜ドローンプロジェクト"}]},
+  {"id": "qKW46cJerJ4", "name": "岩城山積善山の桜", "pref": "愛媛県", "city": "", "region": "shikoku", "type": "someiyoshino", "lat": 33.60136, "lng": 132.81853, "videos": [{"ytId": "qKW46cJerJ4", "label": "本編", "title": "[SAKURA DRONE 4K] 愛媛県岩城山積善山の桜｜Sakura in Mt.Sekizen｜桜ドローンプロジェクト2023 in 瀬戸内海"}]},
+  {"id": "rsyVa0q7obY", "name": "今治市 伯方島 開山公園", "pref": "愛媛県", "city": "今治市", "region": "shikoku", "type": "someiyoshino", "lat": 34.22883, "lng": 133.06568, "videos": [{"ytId": "rsyVa0q7obY", "label": "本編", "title": "[桜ドローン撮影4K]愛媛県今治市 伯方島 開山公園 / Hirakiyama Park, Hakata Island, Imabari, Ehime | 桜ドローンプロジェクト"}]},
+  {"id": "n-vw7q7tP54", "name": "宇和島城", "pref": "愛媛県", "city": "", "region": "shikoku", "type": "someiyoshino", "lat": 33.21982, "lng": 132.56473, "videos": [{"ytId": "n-vw7q7tP54", "label": "本編", "title": "[桜ドローン撮影4K]愛媛県宇和島城 Uwajima Castle｜桜ドローンプロジェクト"}]},
+  {"id": "2unA9ZkG3lc", "name": "四国中央市霧の森", "pref": "愛媛県", "city": "", "region": "shikoku", "type": "someiyoshino", "lat": 33.92326, "lng": 133.6415, "videos": [{"ytId": "2unA9ZkG3lc", "label": "本編", "title": "[桜ドローン撮影4K] 愛媛県四国中央市霧の森｜桜ドローンプロジェクト"}]},
+  {"id": "XtRtGKpdzlE", "name": "紫雲出山の桜", "pref": "香川県", "city": "三豊市", "region": "shikoku", "type": "someiyoshino", "lat": 34.2311, "lng": 133.63945, "videos": [{"ytId": "XtRtGKpdzlE", "label": "2023", "title": "[SAKURA DRONE 4K] 紫雲出山の桜｜Sakura in Mt.Shiude｜桜ドローンプロジェクト2023 in 瀬戸内海"}, {"ytId": "nWGfWjWWRWo", "label": "別ver", "title": "[桜ドローン撮影4K] 香川県三豊市紫雲出山の桜（瀬戸内海）｜桜ドローンプロジェクト"}]},
+  {"id": "zYmvabLwS5s", "name": "高松市 女木島と男木島の桜", "pref": "香川県", "city": "高松市", "region": "shikoku", "type": "someiyoshino", "lat": 34.34256, "lng": 134.04653, "videos": [{"ytId": "zYmvabLwS5s", "label": "本編", "title": "[SAKURA DRONE 4K] 香川県高松市 女木島と男木島の桜｜Sakura in Megishima and Ogishima｜桜ドローンプロジェクト2023 in 瀬戸内海"}]},
+  {"id": "jBudfCxyqto", "name": "瀬戸内海の桜", "pref": "香川県", "city": "三豊市", "region": "shikoku", "type": "someiyoshino", "lat": 34.27, "lng": 133.68, "videos": [{"ytId": "jBudfCxyqto", "label": "本編", "title": "[SAKURA DRONE 4K] 瀬戸内海の桜 ｜Sakura in Seto Island Sea｜桜ドローンプロジェクト2023"}]},
+  {"id": "R2dbiQOO6sI", "name": "仁淀川町仁淀ブルーとひょうたん桜", "pref": "高知県", "city": "仁淀川町", "region": "shikoku", "type": "someiyoshino", "lat": 33.57142, "lng": 133.17079, "videos": [{"ytId": "R2dbiQOO6sI", "label": "ひょうたん桜", "title": "[桜ドローン撮影4K]高知県仁淀川町仁淀ブルーとひょうたん桜 / Niyodo Blue and Hyotan sakura, Niyodogawa, Kochi | 桜ドローンプロジェクト"}, {"ytId": "hXY0Q4fmlFM", "label": "仁淀ブルー", "title": "[桜ドローン撮影4K] 仁淀ブルーと桜 高知県仁淀川町｜桜ドローンプロジェクト"}]},
+  {"id": "km0C9VASrTA", "name": "宿毛市荒瀬山の桜", "pref": "高知県", "city": "宿毛市", "region": "shikoku", "type": "someiyoshino", "lat": 32.93906, "lng": 132.72627, "videos": [{"ytId": "km0C9VASrTA", "label": "本編", "title": "[桜ドローン撮影4K]高知県宿毛市荒瀬山の桜｜桜ドローンプロジェクト"}]},
+  {"id": "YHOhMzhzlFc", "name": "嬉野市 納戸料の百年桜", "pref": "佐賀県", "city": "", "region": "kyushu", "type": "someiyoshino", "lat": 33.08674, "lng": 130.01813, "videos": [{"ytId": "YHOhMzhzlFc", "label": "本編", "title": "[桜ドローン撮影4K]佐賀県嬉野市 納戸料の百年桜 / Nandoryo no Hyakunen Sakura, Ureshino, Saga | 桜ドローンプロジェクト"}]},
+  {"id": "ok-Z-DlW1Zk", "name": "多久市西渓公園", "pref": "佐賀県", "city": "", "region": "kyushu", "type": "someiyoshino", "lat": 33.25719, "lng": 130.08948, "videos": [{"ytId": "ok-Z-DlW1Zk", "label": "本編", "title": "[桜ドローン撮影4K] 佐賀県多久市西渓公園｜桜ドローンプロジェクト"}]},
+  {"id": "XzaU-uZ8jr4", "name": "城島高原パークの桜", "pref": "大分県", "city": "", "region": "kyushu", "type": "someiyoshino", "lat": 33.23832, "lng": 131.61247, "videos": [{"ytId": "XzaU-uZ8jr4", "label": "本編", "title": "[桜ドローン撮影4K] 大分県城島高原パークの桜｜桜ドローンプロジェクト"}]},
+  {"id": "RJPuKiI2zVk", "name": "西都市西都原古墳群", "pref": "宮崎県", "city": "", "region": "kyushu", "type": "someiyoshino", "lat": 32.11518, "lng": 131.38947, "videos": [{"ytId": "RJPuKiI2zVk", "label": "本編", "title": "[桜ドローン撮影4K] 宮崎県西都市西都原古墳群｜桜ドローンプロジェクト"}]},
+  {"id": "FEj7so8hhKE", "name": "今帰仁城跡のカンヒザクラ", "pref": "沖縄県", "city": "", "region": "kyushu", "type": "kanhizakura", "lat": 26.57078, "lng": 128.02559, "videos": [{"ytId": "FEj7so8hhKE", "label": "本編", "title": "[桜ドローン撮影4K] 沖縄県今帰仁城跡のカンヒザクラ（寒緋桜)  ｜桜ドローンプロジェクト"}]},
+  {"id": "MUjYhuM7qn4", "name": "市房ダム&人吉城", "pref": "熊本県", "city": "県市", "region": "kyushu", "type": "someiyoshino", "lat": 32.79151, "lng": 130.74779, "videos": [{"ytId": "MUjYhuM7qn4", "label": "本編", "title": "[桜ドローン撮影4K]熊本県市房ダム&人吉城｜桜ドローンプロジェクト"}]},
+  {"id": "_tO_rZPCm7s", "name": "みやま市平家の一本桜", "pref": "福岡県", "city": "みやま市", "region": "kyushu", "type": "someiyoshino", "lat": 33.15237, "lng": 130.47463, "videos": [{"ytId": "_tO_rZPCm7s", "label": "本編", "title": "[桜ドローン撮影4K]福岡県みやま市平家の一本桜 / Heike Ipponzakura, Miyama, Fukuoka | 桜ドローンプロジェクト"}]},
+  {"id": "m6G-V4WisOE", "name": "北九州市若松高校のソメイヨシノ", "pref": "福岡県", "city": "北九州市", "region": "kyushu", "type": "someiyoshino", "lat": 33.8969, "lng": 130.70059, "videos": [{"ytId": "m6G-V4WisOE", "label": "本編", "title": "[桜ドローン撮影4K]  福岡県北九州市若松高校のソメイヨシノ（染井吉野) ｜桜ドローンプロジェクト"}]},
+  {"id": "PJtBv70WNPE", "name": "大村市大村公園の桜", "pref": "長崎県", "city": "大村", "region": "kyushu", "type": "someiyoshino", "lat": 32.92766, "lng": 129.93983, "videos": [{"ytId": "PJtBv70WNPE", "label": "本編", "title": "[桜ドローン撮影4K]  長崎県大村市大村公園(玖島城跡)の桜｜桜ドローンプロジェクト"}]},
+  {"id": "9RCipkCBrDc", "name": "串良平和公園, 霧島神話の里公園, 丸岡公園", "pref": "鹿児島県", "city": "", "region": "kyushu", "type": "someiyoshino", "lat": 31.41687, "lng": 130.92968, "videos": [{"ytId": "9RCipkCBrDc", "label": "本編", "title": "[桜ドローン撮影4K] 鹿児島県 串良平和公園, 霧島神話の里公園, 丸岡公園/ Kushira Heiwa Park, Maruoka Park, Kagoshima | 桜ドローンプロジェクト"}]},
+  {"id": "sO4Y8s5jPR4", "name": "桜島の桜", "pref": "鹿児島県", "city": "", "region": "kyushu", "type": "someiyoshino", "lat": 31.58935, "lng": 130.59887, "videos": [{"ytId": "sO4Y8s5jPR4", "label": "本編", "title": "[桜ドローン撮影4K] 鹿児島県桜島の桜 Sakurajima｜桜ドローンプロジェクト"}]}
 ];
 
-const REGION_ORDER = ['北海道','東北','関東','中部','近畿','中国','四国','九州'];
+/* ===== helpers ===== */
+const thumb = (id) => `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+const spotThumb = (s) => thumb(s.videos[0].ytId);
+const prefShort = (p) => p.replace(/[県都府道]$/,'');
+const ICON = {
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none"><path d="M12 22s7-7.5 7-13a7 7 0 10-14 0c0 5.5 7 13 7 13z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="9" r="2.4" fill="currentColor"/></svg>',
+  close:'<svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+  yt:'<svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor"/><path d="M10 9l5 3-5 3z" fill="#fff"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none"><path d="M9.5 14.5l5-5M8 12l-2 2a3.5 3.5 0 105 5l2-2M16 12l2-2a3.5 3.5 0 10-5-5l-2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  share:'<svg viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="2.4" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="6" r="2.4" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="18" r="2.4" stroke="currentColor" stroke-width="2"/><path d="M8 11l8-4M8 13l8 4" stroke="currentColor" stroke-width="2"/></svg>'
+};
+const esc = (s) => (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-/* ===== 地図初期化 ===== */
-const JP_BOUNDS = L.latLngBounds([24.0, 122.0], [46.5, 149.5]);
-const map = L.map('map', {
-  zoomControl: true, minZoom: 4, maxBounds: JP_BOUNDS, maxBoundsViscosity: 0.7
-}).setView([38.0, 138.5], 5);
-// 地理院タイル（淡色・日本語ラベル）
-L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
-  attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html'>地理院タイル</a>", maxZoom: 18
-}).addTo(map);
-
-/* =========================================================================
-   1スポット複数動画の集約 — 同一スポットと確信できるものだけ手動マージ
-   各 { 動画ID: ラベル }。先頭の動画が代表 (ピンのサムネ・座標基準)。
-   ここに無い動画は 1動画=1スポット (単独) として扱う。
-   ========================================================================= */
-const MERGE = [
-  { 'g4eKQmaukEs':'Short Ver', 'sVrb4xvofaE':'Long Ver', 'sHMDuoAYipA':'2020' },        // 富山・春の四重奏
-  { 'z5ZUdfy89-s':'メイン', 'g9k4X8C3wKk':'別アングル' },                                  // 静岡・潤井川龍巌淵
-  { 'EXa-A-sdij4':'2026 潤野', 'YP5V1NPHibo':'2023', 'Knjr3sgefEM':'新種発見' },           // 和歌山・古座川クマノザクラ
-  { 'N-9XvquJ3wE':'ロングショット', 'kl_HC089y74':'2023', 'Xj2e3dGwI9g':'別ver' },          // 広島・佐木島塔ノ峰千本桜
-  { 'XtRtGKpdzlE':'2023', 'nWGfWjWWRWo':'別ver' },                                       // 香川・紫雲出山
-  { 'R2dbiQOO6sI':'ひょうたん桜', 'hXY0Q4fmlFM':'仁淀ブルー' },                             // 高知・仁淀ブルー
-];
-
-/* ===== スポット(グループ)を構築 ===== */
-function buildGroups() {
-  const byId = {}; SPOTS.forEach(s => byId[s.id] = s);
-  const consumed = new Set();
-  const groups = [];
-  MERGE.forEach(m => {
-    const ids = Object.keys(m).filter(id => byId[id]);
-    if (!ids.length) return;
-    const rep = byId[ids[0]];
-    const members = ids.map(id => byId[id]);
-    members.forEach(s => consumed.add(s.id));
-    groups.push({
-      id: rep.id, name: rep.name, pref: rep.pref, city: rep.city, region: rep.region,
-      lat: members.reduce((a,s)=>a+s.lat,0)/members.length,
-      lng: members.reduce((a,s)=>a+s.lng,0)/members.length,
-      videos: ids.map(id => ({ id, label: m[id] }))
-    });
-  });
-  SPOTS.forEach(s => {
-    if (consumed.has(s.id)) return;
-    groups.push({ ...s, videos: [{ id: s.id, label: s.name }] });
-  });
-  return groups;
-}
-const GROUPS = buildGroups();
-const groupByVideo = {};
-GROUPS.forEach(g => g.videos.forEach(v => groupByVideo[v.id] = g));
-
-function thumbIcon(g) {
-  const badge = g.videos.length > 1 ? `<span class="vcount">${g.videos.length}</span>` : '';
-  return L.divIcon({
-    className: '',
-    html: `<div class="sakura-thumb"><span class="bud">🌸</span>${badge}`
-        + `<img loading="lazy" src="https://img.youtube.com/vi/${g.id}/default.jpg" alt=""></div>`,
-    iconSize: [48,48], iconAnchor: [24,55], popupAnchor: [0,-50]
-  });
-}
-
-const cluster = L.markerClusterGroup({ maxClusterRadius: 55, showCoverageOnHover: false });
-let activeRegion = 'all';
-
-function buildMarkers(fit) {
-  cluster.clearLayers();
-  let n = 0;
-  GROUPS.forEach(g => {
-    if (activeRegion !== 'all' && g.region !== activeRegion) return;
-    const m = L.marker([g.lat, g.lng], { icon: thumbIcon(g), title: g.name });
-    m.on('click', () => openGroup(g));
-    cluster.addLayer(m);
-    n++;
-  });
-  map.addLayer(cluster);
-  document.getElementById('spotCount').textContent = n;
-  if (fit && n > 0) map.fitBounds(cluster.getBounds(), { padding: [60, 60], maxZoom: 9 });
-}
-
-/* ===== 詳細パネル ===== */
-function playVideo(id) {
-  document.getElementById('ytFrame').src = `https://www.youtube-nocookie.com/embed/${id}?rel=0&autoplay=1`;
-  document.getElementById('pLink').href = `https://youtu.be/${id}`;
-  document.querySelectorAll('#pSwitch .vthumb').forEach(el =>
-    el.classList.toggle('active', el.dataset.vid === id));
-}
-function openGroup(g, activeId) {
-  document.getElementById('pPref').textContent = g.pref;
-  document.getElementById('pTitle').textContent = g.name + (g.videos.length > 1 ? `（動画${g.videos.length}本）` : '');
-  document.getElementById('pMeta').textContent = `${g.pref} ${g.city}`;
-  const sw = document.getElementById('pSwitch');
-  sw.innerHTML = '';
-  if (g.videos.length > 1) {
-    g.videos.forEach(v => {
-      const t = document.createElement('div');
-      t.className = 'vthumb'; t.dataset.vid = v.id;
-      t.innerHTML = `<img loading="lazy" src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg" alt="">`
-                  + `<div class="vlabel">${v.label}</div>`;
-      t.onclick = () => playVideo(v.id);
-      sw.appendChild(t);
-    });
-    sw.classList.add('show');
-  } else {
-    sw.classList.remove('show');
+/* ===== Leaflet map engine ===== */
+const SakuraMap = (function(){
+  let map, cluster, markersById={}, selectedId=null, onSelect=null, allSpots=[];
+  function clusterHtml(count){
+    const size = count<6?44:count<16?54:count<36?66:78;
+    const core = Math.round(size*0.62);
+    const fs = count<36?16:18;
+    return {html:`<div class="cl"><div class="cl-ring" style="width:${size}px;height:${size}px"><div class="cl-core" style="width:${core}px;height:${core}px;font-size:${fs}px">${count}</div></div></div>`, size};
   }
-  playVideo(activeId && g.videos.some(v=>v.id===activeId) ? activeId : g.videos[0].id);
-  document.getElementById('panel').classList.add('open');
-}
-function closePanel() {
-  document.getElementById('panel').classList.remove('open');
-  document.getElementById('ytFrame').src = '';
-}
-
-/* ===== 地方フィルタ ===== */
-function buildFilters() {
-  const present = new Set(GROUPS.map(g => g.region));
-  const ordered = REGION_ORDER.filter(r => present.has(r));
-  const box = document.getElementById('filters');
-  const mk = (key, label, active) => {
-    const c = document.createElement('div');
-    c.className = 'chip' + (active ? ' active' : '');
-    c.textContent = label;
-    c.onclick = () => {
-      activeRegion = key;
-      document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
-      c.classList.add('active');
-      buildMarkers(true);
-    };
-    box.appendChild(c);
-  };
-  mk('all', 'すべて', true);
-  ordered.forEach(r => mk(r, r, false));
-}
-
-/* ===== 一覧 (地方ごとにグループ) ===== */
-function buildList() {
-  const box = document.getElementById('list');
-  const present = REGION_ORDER.filter(r => GROUPS.some(g => g.region === r));
-  present.forEach(r => {
-    const head = document.createElement('div');
-    head.className = 'list-group'; head.textContent = r;
-    box.appendChild(head);
-    GROUPS.filter(g => g.region === r).forEach(g => {
-      const it = document.createElement('div');
-      it.className = 'list-item';
-      const tag = g.videos.length > 1 ? ` <span style="color:var(--brand-red);font-weight:700">▶${g.videos.length}</span>` : '';
-      it.innerHTML = `<div>${g.name}${tag}</div><div class="li-pref">${g.pref} ${g.city}</div>`;
-      it.onclick = () => {
-        map.flyTo([g.lat, g.lng], 11, { duration: .8 });
-        setTimeout(() => openGroup(g), 750);
-        document.getElementById('list').classList.remove('open');
-      };
-      box.appendChild(it);
+  function pinIcon(spot, selected){
+    const multi = spot.videos.length>1;
+    const html = `<div class="pin ${selected?'selected':''}">`+
+      `<span class="pin-petal">🌸</span>`+
+      (multi?`<span class="pin-badge">${spot.videos.length}</span>`:'')+
+      `<div class="pin-card"><div class="pin-thumb" style="background-image:url(${thumb(spot.videos[0].ytId)})"></div>`+
+      `<div class="pin-pref">${esc(prefShort(spot.pref))}</div></div>`+
+      `<div class="pin-tail"></div></div>`;
+    return L.divIcon({html, className:'pin-wrap', iconSize:[86,67], iconAnchor:[43,67], popupAnchor:[0,-64]});
+  }
+  function init(opts){
+    onSelect=opts.onSelect;
+    map=L.map('map',{center:[37.6,137.5],zoom:5,minZoom:4,maxZoom:16,zoomControl:false,worldCopyJump:false,maxBounds:L.latLngBounds([20,118],[48,154]),maxBoundsViscosity:0.6});
+    map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{attribution:'地理院タイル',maxZoom:18}).addTo(map);
+    cluster=L.markerClusterGroup({maxClusterRadius:58,showCoverageOnHover:false,spiderfyOnMaxZoom:true,chunkedLoading:true,
+      iconCreateFunction:c=>{const i=clusterHtml(c.getChildCount());return L.divIcon({html:i.html,className:'cl-wrap',iconSize:[i.size,i.size]});}});
+    map.addLayer(cluster);
+  }
+  function render(spots){
+    cluster.clearLayers(); markersById={};
+    spots.forEach(spot=>{
+      const m=L.marker([spot.lat,spot.lng],{icon:pinIcon(spot,spot.id===selectedId),riseOnHover:true});
+      m._spot=spot; m.on('click',()=>onSelect&&onSelect(spot.id));
+      markersById[spot.id]=m; cluster.addLayer(m);
     });
-  });
-  document.getElementById('listBtn').onclick = () =>
-    document.getElementById('list').classList.toggle('open');
+  }
+  function setData(spots){allSpots=spots;render(spots);}
+  function select(id, fly){
+    const prev=markersById[selectedId]; if(prev) prev.setIcon(pinIcon(prev._spot,false));
+    selectedId=id; const m=markersById[id];
+    if(m){ m.setIcon(pinIcon(m._spot,true));
+      if(fly){const tz=Math.max(map.getZoom(),9);cluster.zoomToShowLayer(m,()=>map.setView(m.getLatLng(),Math.max(map.getZoom(),tz),{animate:true}));}
+    } else if(fly){const s=allSpots.find(x=>x.id===id); if(s) map.flyTo([s.lat,s.lng],10,{duration:.8});}
+  }
+  function clearSelection(){const prev=markersById[selectedId]; if(prev) prev.setIcon(pinIcon(prev._spot,false)); selectedId=null;}
+  function fitRegion(spots){
+    if(!spots.length){map.flyTo([37.6,137.5],5,{duration:.7});return;}
+    map.flyToBounds(L.latLngBounds(spots.map(s=>[s.lat,s.lng])),{padding:[90,90],maxZoom:9,duration:.7});
+  }
+  return {init,setData,select,clearSelection,fitRegion,zoomIn:()=>map.zoomIn(),zoomOut:()=>map.zoomOut()};
+})();
+
+/* ===== state ===== */
+let state={region:'all',type:null,query:'',selectedId:null,panelOpen:false,drawerOpen:false,vid:0,playing:false};
+const isMobile=()=>matchMedia('(max-width:760px)').matches;
+const $=id=>document.getElementById(id);
+
+const matchRegion=s=>state.region==='all'||s.region===state.region;
+const matchType=s=>!state.type||s.type===state.type;
+const matchQuery=s=>{const q=state.query.trim().toLowerCase();return !q||(s.name+s.pref+s.city+s.videos.map(v=>v.title).join('')).toLowerCase().includes(q);};
+const filtered=()=>SPOTS.filter(s=>matchRegion(s)&&matchType(s)&&matchQuery(s));
+
+/* ===== render: header count, chips, type menu ===== */
+function renderCount(n){$('countNum').textContent=n;}
+function renderChips(){
+  const counts={}; SPOTS.filter(s=>matchType(s)&&matchQuery(s)).forEach(s=>counts[s.region]=(counts[s.region]||0)+1);
+  $('chips').innerHTML = REGIONS.map(r=>{
+    const c = r.id!=='all'&&counts[r.id]!=null ? `<span class="chip-count">${counts[r.id]}</span>`:'';
+    return `<button class="chip ${state.region===r.id?'active':''}" data-r="${r.id}">${esc(r.label)}${c}</button>`;
+  }).join('');
+  $('chips').querySelectorAll('.chip').forEach(b=>b.onclick=()=>onRegion(b.dataset.r));
+}
+function renderTypeMenu(){
+  const counts={}; SPOTS.filter(s=>matchRegion(s)&&matchQuery(s)).forEach(s=>counts[s.type]=(counts[s.type]||0)+1);
+  const opt=(id,label,count)=>`<div class="type-opt ${state.type===id?'sel':''}" data-t="${id==null?'':id}"><span class="opt-left"><span class="dot"></span>${esc(label)}</span>${count!=null?`<span class="opt-count">${count}</span>`:''}</div>`;
+  let html=opt(null,'すべての種類',null);
+  html+=SAKURA_TYPES.map(t=>opt(t.id,t.label,counts[t.id]||0)).join('');
+  $('typeMenu').innerHTML=html;
+  $('typeMenu').querySelectorAll('.type-opt').forEach(o=>o.onclick=()=>{onType(o.dataset.t||null);closeTypeMenu();});
+  $('typeBtn').classList.toggle('has-value',!!state.type);
+  $('typeLabel').textContent = state.type?TYPE_LABEL[state.type]:'桜の種類';
+}
+function renderClear(){
+  const any=!!state.type||!!state.query.trim()||state.region!=='all';
+  const b=$('clearBtn'); b.hidden=!any;
+  b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" style="width:12px;height:12px"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>絞り込み解除`;
 }
 
-/* ===== 共有用ディープリンク ?spot=<videoId> ===== */
-const deepId = new URLSearchParams(location.search).get('spot');
-const deepGroup = deepId ? groupByVideo[deepId] : null;
+/* ===== drawer list ===== */
+function renderDrawer(){
+  const q=$('drawerSearch').value.trim().toLowerCase();
+  let spots=filtered();
+  if(q) spots=spots.filter(s=>(s.name+s.pref+s.city).toLowerCase().includes(q));
+  const order=REGIONS.filter(r=>r.id!=='all').map(r=>r.id);
+  const g={}; spots.forEach(s=>{(g[s.region]=g[s.region]||[]).push(s);});
+  const groups=order.filter(id=>g[id]).map(id=>({id,label:REGION_LABEL[id],items:g[id]}));
+  const box=$('drawerList');
+  if(!groups.length){box.innerHTML=`<div class="list-empty"><span class="le-petal">❀</span>該当する名所が見つかりません</div>`;return;}
+  box.innerHTML=groups.map(grp=>
+    `<div class="region-head">${esc(grp.label)}<span class="rh-count">${grp.items.length}</span></div>`+
+    grp.items.map(s=>
+      `<div class="list-item ${s.id===state.selectedId?'active':''}" data-id="${s.id}">`+
+      `<div class="li-thumb"><div class="lt-img" style="background-image:url(${spotThumb(s)})"></div>${s.videos.length>1?`<span class="li-badge">${s.videos.length}本</span>`:''}</div>`+
+      `<div class="li-body"><div class="li-name">${esc(s.name)}</div><div class="li-meta"><span class="li-loc">${esc(s.pref)} ${esc(s.city)}</span><span class="li-type">${esc(TYPE_LABEL[s.type])}</span></div></div>`+
+      `</div>`).join('')
+  ).join('');
+  box.querySelectorAll('.list-item').forEach(el=>el.onclick=()=>handleSelect(el.dataset.id));
+}
 
-buildFilters();
-buildList();
-buildMarkers(!deepGroup);   // ディープリンク時は全体フィットせず該当地点へ寄せる
+/* ===== detail panel ===== */
+function renderPanel(){
+  const s=SPOTS.find(x=>x.id===state.selectedId);
+  const panel=$('panel');
+  panel.className='panel'+(state.panelOpen?' open':'');
+  if(!s){panel.innerHTML='';return;}
+  const v=s.videos[state.vid]||s.videos[0];
+  const media = state.playing
+    ? `<iframe src="https://www.youtube-nocookie.com/embed/${v.ytId}?autoplay=1&rel=0" title="${esc(v.title)}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`
+    : `<div class="media-img" style="background-image:url(${thumb(v.ytId)})"></div><div class="media-shade"></div>`+
+      `<button class="media-play" id="mediaPlay" aria-label="再生">${ICON.play}</button><span class="media-dur">4K · 空撮</span>`;
+  const vlist = s.videos.length>1
+    ? `<div class="vid-head">この名所の動画 (${s.videos.length})</div><div class="vid-list">`+
+      s.videos.map((vv,i)=>`<div class="vid-row ${i===state.vid?'active':''}" data-i="${i}"><div class="vid-thumb"><div class="vt-img" style="background-image:url(${thumb(vv.ytId)})"></div><div class="vt-play">${ICON.play}</div></div><div class="vid-info"><div class="vid-label">${esc(vv.label)}</div><div class="vid-title">${esc(vv.title)}</div></div></div>`).join('')+
+      `</div>`
+    : '';
+  panel.innerHTML=
+    `<div class="panel-media">${media}<button class="panel-close" id="panelClose" aria-label="閉じる">${ICON.close}</button></div>`+
+    `<div class="panel-body">`+
+    `<div class="panel-tags"><span class="tag-pref">${esc(s.pref)}</span><span class="tag-type">${esc(TYPE_LABEL[s.type])}</span></div>`+
+    `<h2 class="panel-title">${esc(s.name)}</h2>`+
+    `<div class="panel-loc">${ICON.pin} ${esc(s.pref)} ${esc(s.city)}</div>`+
+    `<div class="panel-meta"><div class="meta-item"><div class="meta-val">${s.videos.length}</div><div class="meta-lab">本の動画</div></div><div class="meta-item"><div class="meta-val">4K</div><div class="meta-lab">空撮品質</div></div></div>`+
+    vlist+
+    `<a class="btn-yt" href="https://www.youtube.com/watch?v=${v.ytId}" target="_blank" rel="noreferrer">${ICON.yt} YouTube で見る</a>`+
+    `<div class="panel-share"><button class="share-btn" id="copyBtn">${ICON.link} <span>リンクをコピー</span></button><button class="share-btn" id="shareBtn">${ICON.share} 共有</button></div>`+
+    `</div>`;
+  const mp=$('mediaPlay'); if(mp) mp.onclick=()=>{state.playing=true;renderPanel();};
+  $('panelClose').onclick=closePanel;
+  panel.querySelectorAll('.vid-row').forEach(r=>r.onclick=()=>{state.vid=+r.dataset.i;state.playing=false;renderPanel();});
+  $('copyBtn').onclick=()=>{const url=`${location.origin}${location.pathname}?spot=${v.ytId}`;navigator.clipboard&&navigator.clipboard.writeText(url);const sp=$('copyBtn').querySelector('span');if(sp){const o=sp.textContent;sp.textContent='コピーしました';setTimeout(()=>sp.textContent=o,1400);}};
+  $('shareBtn').onclick=()=>{const url=`${location.origin}${location.pathname}?spot=${v.ytId}`;if(navigator.share)navigator.share({title:s.name,text:`${s.name}｜桜ドローンプロジェクト`,url});else{navigator.clipboard&&navigator.clipboard.writeText(url);}};
+}
 
-if (deepGroup) {
-  map.setView([deepGroup.lat, deepGroup.lng], 11);
-  setTimeout(() => openGroup(deepGroup, deepId), 400);
+/* ===== actions ===== */
+function refreshChrome(){renderCount(filtered().length);renderChips();renderClear();}
+function handleSelect(id){
+  state.selectedId=id;state.panelOpen=true;state.vid=0;state.playing=false;
+  SakuraMap.select(id,true);
+  if(isMobile()){state.drawerOpen=false;syncDrawer();}
+  renderPanel();renderDrawer();
+}
+function closePanel(){state.panelOpen=false;renderPanel();SakuraMap.clearSelection();setTimeout(()=>{state.selectedId=null;renderDrawer();},200);}
+function onRegion(id){
+  state.region=id;
+  const next=SPOTS.filter(s=>(id==='all'||s.region===id)&&matchType(s)&&matchQuery(s));
+  SakuraMap.setData(filtered()); if(state.selectedId)SakuraMap.select(state.selectedId,false);
+  SakuraMap.fitRegion(next); refreshChrome();renderDrawer();
+}
+function onType(t){
+  state.type=t;
+  SakuraMap.setData(filtered()); if(state.selectedId)SakuraMap.select(state.selectedId,false);
+  refreshChrome();renderTypeMenu();renderDrawer();
+}
+function onQuery(q){
+  state.query=q;
+  SakuraMap.setData(filtered()); if(state.selectedId)SakuraMap.select(state.selectedId,false);
+  refreshChrome();renderTypeMenu();renderDrawer();
+}
+function clearAll(){state.region='all';state.type=null;state.query='';$('search').value='';SakuraMap.setData(SPOTS);SakuraMap.fitRegion(SPOTS);refreshChrome();renderTypeMenu();renderDrawer();}
+function syncDrawer(){$('drawer').className='drawer'+(state.drawerOpen?' open':'');$('scrim').className='scrim'+(state.drawerOpen&&isMobile()?' show':'');}
+function openTypeMenu(){$('typeSelect').classList.add('open');$('typeMenu').hidden=false;}
+function closeTypeMenu(){$('typeSelect').classList.remove('open');$('typeMenu').hidden=true;}
+
+/* ===== petals ===== */
+function buildPetals(){
+  const box=$('petals');let h='';
+  for(let i=0;i<16;i++){
+    const left=Math.random()*100,delay=-Math.random()*16,dur=13+Math.random()*12,size=7+Math.random()*8,sway=30+Math.random()*50,op=.35+Math.random()*.4;
+    h+=`<span class="petal" style="left:${left}%;width:${size}px;height:${size*0.86}px;animation-delay:${delay}s;animation-duration:${dur}s;opacity:${op};--sway:${sway}px"></span>`;
+  }
+  box.innerHTML=h;
+}
+
+/* ===== wire events ===== */
+$('zin').onclick=()=>SakuraMap.zoomIn();
+$('zout').onclick=()=>SakuraMap.zoomOut();
+$('listToggle').onclick=()=>{state.drawerOpen=!state.drawerOpen;syncDrawer();};
+$('drawerClose').onclick=()=>{state.drawerOpen=false;syncDrawer();};
+$('scrim').onclick=()=>{state.drawerOpen=false;syncDrawer();};
+$('clearBtn').onclick=clearAll;
+$('search').oninput=e=>onQuery(e.target.value);
+$('drawerSearch').oninput=renderDrawer;
+$('typeBtn').onclick=()=>{$('typeSelect').classList.contains('open')?closeTypeMenu():openTypeMenu();};
+document.addEventListener('mousedown',e=>{if(!$('typeSelect').contains(e.target))closeTypeMenu();});
+
+/* ===== boot ===== */
+SakuraMap.init({onSelect:handleSelect});
+SakuraMap.setData(SPOTS);
+buildPetals();
+renderChips();renderTypeMenu();renderClear();renderCount(SPOTS.length);renderDrawer();
+
+const deepId=new URLSearchParams(location.search).get('spot');
+const deepSpot=deepId?SPOTS.find(s=>s.videos.some(v=>v.ytId===deepId)):null;
+if(deepSpot){
+  state.selectedId=deepSpot.id;state.panelOpen=true;
+  const vi=deepSpot.videos.findIndex(v=>v.ytId===deepId);state.vid=vi<0?0:vi;
+  SakuraMap.select(deepSpot.id,true);renderPanel();renderDrawer();
 }
 </script>
 </body>
